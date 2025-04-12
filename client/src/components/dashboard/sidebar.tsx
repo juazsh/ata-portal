@@ -344,15 +344,16 @@ export function Sidebar({ isOpen, setIsOpen }: SidebarProps) {
           <button
             onClick={() => toggleMenu(item.name)}
             className={cn(
-              "flex items-center justify-between w-full px-4 py-2.5 text-sm font-medium rounded-md",
+              "flex items-center justify-between w-full px-4 py-2.5 text-sm font-medium rounded-md relative",
               isActive
-                ? "bg-primary-50 dark:bg-slate-800 text-primary-700 dark:text-primary-400"
+                ? "bg-primary-50 dark:bg-slate-800 text-primary-700 dark:text-primary-400 font-semibold"
                 : "text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800",
-              isSubMenu && level > 0 ? "pl-8" : ""
+              isSubMenu && level > 0 ? "pl-8" : "",
+              isActive && "border-l-4 border-primary pl-3" // Added left border for active items
             )}
           >
             <div className="flex items-center">
-              {item.icon && <item.icon className="w-5 h-5 mr-3" />}
+              {item.icon && <item.icon className={cn("w-5 h-5 mr-3", isActive && "text-primary")} />}
               <span>{item.name}</span>
             </div>
             <ChevronDownIcon
@@ -388,15 +389,21 @@ export function Sidebar({ isOpen, setIsOpen }: SidebarProps) {
               >
                 <div
                   className={cn(
-                    "flex items-center px-4 py-2.5 text-sm font-medium rounded-md cursor-pointer transition-colors",
+                    "flex items-center px-4 py-2.5 text-sm font-medium rounded-md cursor-pointer transition-colors relative",
                     isActive
-                      ? "bg-primary-50 dark:bg-slate-800 text-primary-700 dark:text-primary-400"
+                      ? "bg-primary-50 dark:bg-slate-800 text-primary-700 dark:text-primary-400 font-semibold"
                       : "text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800",
                     isSubMenu && level > 0 ? "pl-8" : "",
-                    level > 1 ? "pl-12" : ""
+                    level > 1 ? "pl-12" : "",
+                    isActive && "border-l-4 border-primary pl-3" // Added left border for active items
                   )}
                 >
-                  {item.icon && <item.icon className="w-5 h-5 mr-3" />}
+                  {isActive && (
+                    <span className="absolute left-0 inset-y-0 w-1 bg-primary-600 rounded-r-full" aria-hidden="true" />
+                  )}
+                  {item.icon && (
+                    <item.icon className={cn("w-5 h-5 mr-3", isActive && "text-primary")} />
+                  )}
                   <span>{item.name}</span>
                 </div>
               </Link>
