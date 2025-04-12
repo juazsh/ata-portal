@@ -1,14 +1,14 @@
 import { useState } from "react";
 import { useLocation, Link } from "wouter";
 import { useAuth } from "@/hooks/use-auth";
-import { 
-  ChevronDownIcon, 
-  GaugeIcon, 
-  BookIcon, 
-  GraduationCapIcon, 
-  PresentationIcon as Presentation, 
-  FileTextIcon, 
-  UsersIcon, 
+import {
+  ChevronDownIcon,
+  GaugeIcon,
+  BookIcon,
+  GraduationCapIcon,
+  PresentationIcon as Presentation,
+  FileTextIcon,
+  UsersIcon,
   SettingsIcon,
   XIcon,
   CreditCardIcon,
@@ -48,12 +48,10 @@ export function Sidebar({ isOpen, setIsOpen }: SidebarProps) {
   const { user } = useAuth();
   const [expandedMenus, setExpandedMenus] = useState<Record<string, boolean>>({});
 
-  // Define sidebar menu items with role-based access based on user role
-  // Here we're creating specialized menu structures for each role
+
   const getMenuItemsByRole = () => {
     const role = user?.role || "";
-    
-    // Parent menu items
+
     if (role === "parent") {
       return [
         {
@@ -72,7 +70,7 @@ export function Sidebar({ isOpen, setIsOpen }: SidebarProps) {
           path: "/payment-info",
         },
         {
-          name: "divider-1", // This will be rendered as a divider
+          name: "divider-1",
           isDivider: true,
         },
         {
@@ -97,8 +95,7 @@ export function Sidebar({ isOpen, setIsOpen }: SidebarProps) {
         }
       ];
     }
-    
-    // Student menu items
+
     if (role === "student") {
       return [
         {
@@ -142,8 +139,8 @@ export function Sidebar({ isOpen, setIsOpen }: SidebarProps) {
         }
       ];
     }
-    
-    // Teacher menu items
+
+
     if (role === "teacher") {
       return [
         {
@@ -196,8 +193,8 @@ export function Sidebar({ isOpen, setIsOpen }: SidebarProps) {
         }
       ];
     }
-    
-    // Owner menu items
+
+
     if (role === "owner") {
       return [
         {
@@ -251,8 +248,8 @@ export function Sidebar({ isOpen, setIsOpen }: SidebarProps) {
         }
       ];
     }
-    
-    // Admin menu items (default)
+
+
     return [
       {
         name: "Home",
@@ -282,10 +279,8 @@ export function Sidebar({ isOpen, setIsOpen }: SidebarProps) {
     ];
   };
 
-  // Get menu items based on user role
   const menuItems: MenuItem[] = getMenuItemsByRole();
 
-  // Toggle submenu expansion
   const toggleMenu = (menuName: string) => {
     setExpandedMenus(prev => ({
       ...prev,
@@ -293,7 +288,6 @@ export function Sidebar({ isOpen, setIsOpen }: SidebarProps) {
     }));
   };
 
-  // Check if the user has access to this menu item
   const hasAccess = (item: MenuItem) => {
     if (!item.roles || item.roles.length === 0) {
       return true;
@@ -301,20 +295,19 @@ export function Sidebar({ isOpen, setIsOpen }: SidebarProps) {
     return item.roles.includes(user?.role || "");
   };
 
-  // Check if a menu item or any of its children are active
+
   const isMenuActive = (item: MenuItem): boolean => {
     if (item.path && location === item.path) {
       return true;
     }
-    
+
     if (item.children) {
       return item.children.some(child => isMenuActive(child));
     }
-    
+
     return false;
   };
 
-  // Filter menu items based on user role
   const filterMenuItems = (items: MenuItem[]): MenuItem[] => {
     return items
       .filter(hasAccess)
@@ -332,16 +325,15 @@ export function Sidebar({ isOpen, setIsOpen }: SidebarProps) {
   };
 
   const renderMenuItem = (item: MenuItem, index: number, isSubMenu = false, level = 0) => {
-    // Handle dividers with shadcn Separator
     if (item.isDivider) {
       return (
-        <Separator 
+        <Separator
           key={`divider-${index}`}
           className="my-2 mx-3"
         />
       );
     }
-    
+
     const isActive = isMenuActive(item);
     const hasChildren = item.children && item.children.length > 0;
     const isExpanded = expandedMenus[item.name];
@@ -353,8 +345,8 @@ export function Sidebar({ isOpen, setIsOpen }: SidebarProps) {
             onClick={() => toggleMenu(item.name)}
             className={cn(
               "flex items-center justify-between w-full px-4 py-2.5 text-sm font-medium rounded-md",
-              isActive 
-                ? "bg-primary-50 dark:bg-slate-800 text-primary-700 dark:text-primary-400" 
+              isActive
+                ? "bg-primary-50 dark:bg-slate-800 text-primary-700 dark:text-primary-400"
                 : "text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800",
               isSubMenu && level > 0 ? "pl-8" : ""
             )}
@@ -363,16 +355,16 @@ export function Sidebar({ isOpen, setIsOpen }: SidebarProps) {
               {item.icon && <item.icon className="w-5 h-5 mr-3" />}
               <span>{item.name}</span>
             </div>
-            <ChevronDownIcon 
+            <ChevronDownIcon
               className={cn(
                 "h-4 w-4 transition-transform duration-200",
                 isExpanded ? "rotate-180" : ""
-              )} 
+              )}
             />
           </button>
           {isExpanded && (
             <div className={cn("pl-12 mt-1 space-y-1", isSubMenu ? "pl-16" : "")}>
-              {item.children?.map((subItem, subIndex) => 
+              {item.children?.map((subItem, subIndex) =>
                 renderMenuItem(subItem, subIndex, true, level + 1)
               )}
             </div>
@@ -381,8 +373,6 @@ export function Sidebar({ isOpen, setIsOpen }: SidebarProps) {
       );
     }
 
-    // Fix the DOM nesting warning by not nesting <a> inside <a>
-    // Add tooltip for enhanced experience
     return (
       <TooltipProvider key={`${item.name}-${index}`}>
         <Tooltip delayDuration={300}>
@@ -399,8 +389,8 @@ export function Sidebar({ isOpen, setIsOpen }: SidebarProps) {
                 <div
                   className={cn(
                     "flex items-center px-4 py-2.5 text-sm font-medium rounded-md cursor-pointer transition-colors",
-                    isActive 
-                      ? "bg-primary-50 dark:bg-slate-800 text-primary-700 dark:text-primary-400" 
+                    isActive
+                      ? "bg-primary-50 dark:bg-slate-800 text-primary-700 dark:text-primary-400"
                       : "text-slate-700 dark:text-slate-200 hover:bg-slate-100 dark:hover:bg-slate-800",
                     isSubMenu && level > 0 ? "pl-8" : "",
                     level > 1 ? "pl-12" : ""
@@ -424,18 +414,19 @@ export function Sidebar({ isOpen, setIsOpen }: SidebarProps) {
 
   return (
     <>
-      {/* Backdrop for mobile */}
       {isOpen && (
-        <div 
-          className="fixed inset-0 bg-black/50 z-10 md:hidden" 
+        <div
+          className="fixed inset-0 bg-black/50 z-10 md:hidden"
           onClick={() => setIsOpen(false)}
         />
       )}
-      
-      <aside 
+
+      <aside
         className={cn(
-          "fixed inset-y-0 left-0 z-20 w-64 bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 pt-16 transition-transform duration-200 ease-in-out md:translate-x-0 md:static",
-          isOpen ? "translate-x-0" : "-translate-x-full"
+          "md:sticky md:top-16 md:h-[calc(100vh-4rem)] md:overflow-hidden md:block",
+          "fixed inset-y-0 left-0 z-20 w-64 bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 pt-16 transition-transform duration-200 ease-in-out",
+          isOpen ? "translate-x-0" : "-translate-x-full",
+          "md:translate-x-0"
         )}
       >
         <div className="flex justify-between items-center p-4 md:hidden">
@@ -444,7 +435,7 @@ export function Sidebar({ isOpen, setIsOpen }: SidebarProps) {
             <XIcon className="h-5 w-5" />
           </Button>
         </div>
-        
+
         <ScrollArea className="h-[calc(100vh-4rem)]">
           <div className="px-3 py-4">
             <nav className="space-y-1 font-medium">

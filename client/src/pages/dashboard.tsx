@@ -1,35 +1,36 @@
 import { useState, useEffect } from "react";
-import { Route, Switch, useLocation } from "wouter";
+import { Route, useLocation, useRoute } from "wouter";
 import { Header } from "@/components/dashboard/header";
 import { Sidebar } from "@/components/dashboard/sidebar";
 import { StatsCards } from "@/components/dashboard/stats-cards";
 import { RecentActivities } from "@/components/dashboard/recent-activities";
 import { Announcements } from "@/components/dashboard/announcements";
 import { Calendar } from "@/components/dashboard/calendar";
+import StudentMenu from "@/components/dashboard/student-menu";
 import { useAuth } from "@/hooks/use-auth";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Button } from "@/components/ui/button";
-import { 
+import {
   Sheet,
   SheetContent,
   SheetDescription,
   SheetHeader,
   SheetTitle,
-  SheetTrigger, 
+  SheetTrigger,
 } from "@/components/ui/sheet";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
-import { 
-  HomeIcon, 
-  GraduationCapIcon, 
-  BookOpenIcon, 
-  UserIcon, 
-  CreditCardIcon, 
-  HistoryIcon, 
-  PhoneIcon, 
-  LogOutIcon, 
-  PlusIcon, 
+import {
+  HomeIcon,
+  GraduationCapIcon,
+  BookOpenIcon,
+  UserIcon,
+  CreditCardIcon,
+  HistoryIcon,
+  PhoneIcon,
+  LogOutIcon,
+  PlusIcon,
   MapPinIcon,
   BarChartIcon
 } from "lucide-react";
@@ -39,7 +40,7 @@ export default function Dashboard() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const { user, logoutMutation } = useAuth();
   const [, navigate] = useLocation();
-  
+
   const toggleSidebar = () => {
     setIsSidebarOpen(!isSidebarOpen);
   };
@@ -49,37 +50,48 @@ export default function Dashboard() {
     navigate("/auth");
   };
 
+  const [isRootMatch] = useRoute("/");
+  const [isStudentsMatch] = useRoute("/students");
+  const [isPaymentInfoMatch] = useRoute("/payment-info");
+  const [isTransactionHistoryMatch] = useRoute("/transaction-history");
+  const [isAccountInfoMatch] = useRoute("/account-info");
+  const [isContactMatch] = useRoute("/contact");
+  const [isProgressMatch] = useRoute("/progress");
+  const [isClassesMatch] = useRoute("/classes");
+  const [isAddTeacherMatch] = useRoute("/add-teacher");
+  const [isAddStudentMatch] = useRoute("/add-student");
+  const [isAddLocationMatch] = useRoute("/add-location");
+
   return (
     <div className="min-h-screen flex flex-col md:flex-row bg-white dark:bg-slate-950">
       <Header toggleSidebar={toggleSidebar} />
       <Sidebar isOpen={isSidebarOpen} setIsOpen={setIsSidebarOpen} />
 
       <main className="flex-1 pt-16 overflow-x-hidden bg-slate-50 dark:bg-slate-950 min-h-screen">
-        <Switch>
-          <Route path="/" component={HomePage} />
-          <Route path="/students" component={StudentsPage} />
-          <Route path="/add-location" component={AddLocationPage} />
-          <Route path="/payment-info" component={PaymentInfoPage} />
-          <Route path="/transaction-history" component={TransactionHistoryPage} />
-          <Route path="/account-info" component={AccountInfoPage} />
-          <Route path="/contact" component={ContactPage} />
-          <Route path="/progress" component={ProgressPage} />
-          <Route path="/classes" component={ClassesPage} />
-          <Route path="/add-teacher" component={AddTeacherPage} />
-          <Route path="/add-student" component={AddStudentPage} />
-          <Route path="/logout">
-            {() => {
-              // Handle logout redirect
-              useEffect(() => {
-                handleLogout();
-              }, []);
-              return <div>Logging out...</div>;
-            }}
-          </Route>
-          <Route>
-            <HomePage />
-          </Route>
-        </Switch>
+        {isRootMatch && <HomePage />}
+        {isStudentsMatch && <StudentsPage />}
+        {isAddLocationMatch && <AddLocationPage />}
+        {isPaymentInfoMatch && <PaymentInfoPage />}
+        {isTransactionHistoryMatch && <TransactionHistoryPage />}
+        {isAccountInfoMatch && <AccountInfoPage />}
+        {isContactMatch && <ContactPage />}
+        {isProgressMatch && <ProgressPage />}
+        {isClassesMatch && <ClassesPage />}
+        {isAddTeacherMatch && <AddTeacherPage />}
+        {isAddStudentMatch && <AddStudentPage />}
+
+        {/* If no matching route and we're not at the root, show HomePage as fallback */}
+        {!isRootMatch &&
+          !isStudentsMatch &&
+          !isAddLocationMatch &&
+          !isPaymentInfoMatch &&
+          !isTransactionHistoryMatch &&
+          !isAccountInfoMatch &&
+          !isContactMatch &&
+          !isProgressMatch &&
+          !isClassesMatch &&
+          !isAddTeacherMatch &&
+          !isAddStudentMatch && <HomePage />}
       </main>
     </div>
   );
@@ -88,11 +100,11 @@ export default function Dashboard() {
 // Dashboard Home Page component
 function HomePage() {
   const { user } = useAuth();
-  
+
   return (
     <div className="px-4 py-6 sm:px-6 lg:px-8">
-      <PageHeader 
-        title="Dashboard" 
+      <PageHeader
+        title="Dashboard"
         description={`Welcome back, ${user?.fullName || 'User'}!`}
         badge={user?.role ? { text: user.role.toUpperCase(), variant: "outline" } : undefined}
       >
@@ -117,48 +129,21 @@ function HomePage() {
   );
 }
 
-// Students Page component
+
 function StudentsPage() {
-  return (
-    <div className="px-4 py-6 sm:px-6 lg:px-8">
-      <PageHeader 
-        title="Students" 
-        description="View and manage all students in the system"
-      >
-        <Button variant="outline" className="flex items-center gap-2">
-          <PlusIcon className="h-4 w-4" />
-          Add New Student
-        </Button>
-      </PageHeader>
-      
-      <Card className="mt-6">
-        <CardHeader>
-          <CardTitle>Student Directory</CardTitle>
-          <CardDescription>
-            You can add, edit, or remove students from here.
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="p-4 bg-slate-100 dark:bg-slate-800 rounded-lg text-center">
-            <GraduationCapIcon className="h-12 w-12 mx-auto text-primary mb-2" />
-            <p>Student list will appear here</p>
-          </div>
-        </CardContent>
-      </Card>
-    </div>
-  );
+  return <StudentMenu />;
 }
 
-// Add Location Page component
+
 function AddLocationPage() {
   return (
     <div className="px-4 py-6 sm:px-6 lg:px-8">
-      <PageHeader 
-        title="Add Location" 
+      <PageHeader
+        title="Add Location"
         description="Create a new location for classes and activities"
         badge={{ text: "ADMIN", variant: "outline" }}
       />
-      
+
       <Card className="mt-6">
         <CardHeader>
           <CardTitle>New Location</CardTitle>
@@ -177,12 +162,12 @@ function AddLocationPage() {
   );
 }
 
-// Payment Info Page component
+
 function PaymentInfoPage() {
   return (
     <div className="px-4 py-6 sm:px-6 lg:px-8">
-      <PageHeader 
-        title="Payment Information" 
+      <PageHeader
+        title="Payment Information"
         description="Manage your payment methods and billing preferences"
       >
         <Button variant="outline" className="flex items-center gap-2">
@@ -190,7 +175,7 @@ function PaymentInfoPage() {
           Add Payment Method
         </Button>
       </PageHeader>
-      
+
       <Card className="mt-6">
         <CardHeader>
           <CardTitle>Payment Methods</CardTitle>
@@ -209,12 +194,12 @@ function PaymentInfoPage() {
   );
 }
 
-// Transaction History Page component
+
 function TransactionHistoryPage() {
   return (
     <div className="px-4 py-6 sm:px-6 lg:px-8">
-      <PageHeader 
-        title="Transaction History" 
+      <PageHeader
+        title="Transaction History"
         description="View your complete payment history and transaction details"
       >
         <Button variant="outline" className="flex items-center gap-2">
@@ -222,7 +207,7 @@ function TransactionHistoryPage() {
           Export History
         </Button>
       </PageHeader>
-      
+
       <Card className="mt-6">
         <CardHeader>
           <CardTitle>Payment History</CardTitle>
@@ -241,14 +226,14 @@ function TransactionHistoryPage() {
   );
 }
 
-// Account Info Page component
+
 function AccountInfoPage() {
   const { user } = useAuth();
-  
+
   return (
     <div className="px-4 py-6 sm:px-6 lg:px-8">
-      <PageHeader 
-        title="My Account" 
+      <PageHeader
+        title="My Account"
         description="Manage your personal information and settings"
         badge={user?.role ? { text: user.role.toUpperCase(), variant: "outline" } : undefined}
       >
@@ -257,7 +242,7 @@ function AccountInfoPage() {
           Edit Profile
         </Button>
       </PageHeader>
-      
+
       <Card className="mt-6">
         <CardHeader>
           <CardTitle>Profile Information</CardTitle>
@@ -269,9 +254,9 @@ function AccountInfoPage() {
           <div className="flex flex-col md:flex-row gap-6 items-start">
             <div className="w-32 h-32 rounded-full bg-primary-50 flex items-center justify-center overflow-hidden">
               {user?.profilePicture ? (
-                <img 
-                  src={user.profilePicture} 
-                  alt={user.fullName || "User"} 
+                <img
+                  src={user.profilePicture}
+                  alt={user.fullName || "User"}
                   className="w-full h-full object-cover"
                 />
               ) : (
@@ -297,9 +282,9 @@ function AccountInfoPage() {
                   <p className="text-lg font-semibold capitalize">{user?.role || "Not available"}</p>
                 </div>
               </div>
-              
+
               <Separator className="my-4" />
-              
+
               <div className="flex gap-2">
                 <Button variant="default">Edit Profile</Button>
                 <Button variant="outline">Change Password</Button>
@@ -312,7 +297,7 @@ function AccountInfoPage() {
   );
 }
 
-// Contact Page component
+
 function ContactPage() {
   return (
     <div className="px-4 py-6 sm:px-6 lg:px-8">
@@ -335,7 +320,7 @@ function ContactPage() {
   );
 }
 
-// Progress Page component
+
 function ProgressPage() {
   return (
     <div className="px-4 py-6 sm:px-6 lg:px-8">
@@ -358,7 +343,7 @@ function ProgressPage() {
   );
 }
 
-// Classes Page component
+
 function ClassesPage() {
   return (
     <div className="px-4 py-6 sm:px-6 lg:px-8">
@@ -381,7 +366,7 @@ function ClassesPage() {
   );
 }
 
-// Add Teacher Page component
+
 function AddTeacherPage() {
   return (
     <div className="px-4 py-6 sm:px-6 lg:px-8">
@@ -404,7 +389,6 @@ function AddTeacherPage() {
   );
 }
 
-// Add Student Page component
 function AddStudentPage() {
   return (
     <div className="px-4 py-6 sm:px-6 lg:px-8">
