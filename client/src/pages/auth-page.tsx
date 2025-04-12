@@ -31,7 +31,7 @@ export default function AuthPage() {
       <div className="w-full max-w-md p-8 space-y-8 bg-white dark:bg-slate-900 rounded-lg shadow-lg">
         <div className="text-center">
           <h1 className="text-3xl font-bold text-slate-900 dark:text-white">
-            Welcome to Nucleus
+            Welcome to FusionMind
           </h1>
           <p className="mt-2 text-sm text-slate-600 dark:text-slate-400">
             A product of AletTau Technologies

@@ -99,6 +99,7 @@ export default function Dashboard() {
 
 // Dashboard Home Page component
 function HomePage() {
+
   const { user } = useAuth();
 
   return (
@@ -114,19 +115,108 @@ function HomePage() {
         </Button>
       </PageHeader>
 
-      <StatsCards />
-      <RecentActivities />
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
 
-      <div className="mt-8 grid grid-cols-1 gap-6 lg:grid-cols-3">
-        <div className="lg:col-span-2">
-          <Announcements />
-        </div>
-        <div>
-          <Calendar />
+        <Card>
+          <CardHeader>
+            <CardTitle>Student Information</CardTitle>
+            <CardDescription>View your student details and progress</CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-4">
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <h3 className="text-sm font-medium text-slate-500 dark:text-slate-400">Name</h3>
+                  <p className="text-lg font-semibold">{user?.fullName || "Not available"}</p>
+                </div>
+                <div>
+                  <h3 className="text-sm font-medium text-slate-500 dark:text-slate-400">Level</h3>
+                  <p className="text-lg font-semibold">Intermediate</p>
+                </div>
+                <div>
+                  <h3 className="text-sm font-medium text-slate-500 dark:text-slate-400">Location</h3>
+                  <p className="text-lg font-semibold">Main Campus</p>
+                </div>
+                <div>
+                  <h3 className="text-sm font-medium text-slate-500 dark:text-slate-400">Progress</h3>
+                  <p className="text-lg font-semibold">78%</p>
+                </div>
+              </div>
+
+              <Separator />
+
+              <div>
+                <h3 className="text-sm font-medium text-slate-500 dark:text-slate-400 mb-2">Progress Overview</h3>
+                <div className="h-32 bg-slate-50 dark:bg-slate-800 rounded-md p-2">
+                  <SmallProgressChart />
+                </div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
+
+        <div className="space-y-6">
+          <Card>
+            <CardHeader>
+              <CardTitle>Payment</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-2 gap-4 mb-4">
+                <div className="p-4 bg-slate-50 dark:bg-slate-800 rounded-md">
+                  <h3 className="text-sm font-medium text-slate-500 dark:text-slate-400">Outstanding</h3>
+                  <p className="text-xl font-semibold mb-2">$350.00</p>
+                  <Button size="sm" className="w-full">Make Payment</Button>
+                </div>
+                <div className="p-4 bg-slate-50 dark:bg-slate-800 rounded-md">
+                  <h3 className="text-sm font-medium text-slate-500 dark:text-slate-400">Credit</h3>
+                  <p className="text-xl font-semibold mb-2">$50.00</p>
+                  <Button size="sm" variant="outline" className="w-full">Add Credit</Button>
+                </div>
+              </div>
+
+              <div className="mb-4">
+                <h3 className="text-sm font-medium text-slate-500 dark:text-slate-400 mb-2">Last Payment</h3>
+                <div className="p-3 bg-slate-50 dark:bg-slate-800 rounded-md">
+                  <div className="flex justify-between items-center">
+                    <div>
+                      <p className="font-medium">Tuition Fee</p>
+                      <p className="text-sm text-slate-500 dark:text-slate-400">March 15, 2025</p>
+                    </div>
+                    <p className="font-semibold">$250.00</p>
+                  </div>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          <Card>
+            <CardHeader>
+              <CardTitle>Payment Method</CardTitle>
+              <CardDescription>Manage your payment information</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="p-4 bg-slate-50 dark:bg-slate-800 rounded-md mb-4">
+                <div className="flex items-center gap-3">
+                  <CreditCardIcon className="h-8 w-8 text-primary" />
+                  <div>
+                    <p className="font-medium">•••• •••• •••• 4242</p>
+                    <p className="text-sm text-slate-500 dark:text-slate-400">Expires 09/27</p>
+                  </div>
+                </div>
+              </div>
+
+              <Button variant="outline" className="w-full flex items-center justify-center gap-2">
+                <PlusIcon className="h-4 w-4" />
+                Add New Payment Method
+              </Button>
+            </CardContent>
+          </Card>
         </div>
       </div>
     </div>
   );
+
 }
 
 
@@ -162,6 +252,74 @@ function AddLocationPage() {
   );
 }
 
+
+function SmallProgressChart() {
+
+  const data = [
+    { month: 'Jan', score: 65 },
+    { month: 'Feb', score: 72 },
+    { month: 'Mar', score: 68 },
+    { month: 'Apr', score: 75 },
+    { month: 'May', score: 78 },
+  ];
+
+  return (
+    <div className="w-full h-full flex items-center justify-center">
+      <svg viewBox="0 0 300 100" className="w-full h-full">
+
+        <line x1="30" y1="90" x2="290" y2="90" stroke="currentColor" strokeOpacity="0.2" />
+        <line x1="30" y1="10" x2="30" y2="90" stroke="currentColor" strokeOpacity="0.2" />
+
+
+        <polyline
+          points="
+            50,${90 - data[0].score * 0.8} 
+            100,${90 - data[1].score * 0.8} 
+            150,${90 - data[2].score * 0.8} 
+            200,${90 - data[3].score * 0.8} 
+            250,${90 - data[4].score * 0.8}
+          "
+          fill="none"
+          stroke="hsl(215, 100%, 50%)"
+          strokeWidth="2"
+        />
+
+
+        {data.map((point, i) => {
+          const x = 50 + i * 50;
+          const y = 90 - point.score * 0.8;
+          return (
+            <circle
+              key={i}
+              cx={x}
+              cy={y}
+              r="4"
+              fill="hsl(215, 100%, 50%)"
+            />
+          );
+        })}
+
+
+        {data.map((point, i) => {
+          const x = 50 + i * 50;
+          return (
+            <text
+              key={i}
+              x={x}
+              y="100"
+              textAnchor="middle"
+              fontSize="10"
+              fill="currentColor"
+              fillOpacity="0.6"
+            >
+              {point.month}
+            </text>
+          );
+        })}
+      </svg>
+    </div>
+  );
+}
 
 function PaymentInfoPage() {
   return (
