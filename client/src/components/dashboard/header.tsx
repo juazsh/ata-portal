@@ -44,9 +44,16 @@ export function Header({ toggleSidebar }: HeaderProps) {
         >
           <MenuIcon className="h-5 w-5 text-slate-500 dark:text-slate-400" />
         </Button>
-        <span className="text-xl font-semibold text-slate-800 dark:text-white">
-          FusionMind Portal
-        </span>
+        <div className="flex items-center">
+          <img
+            src="/src/assets/images/logo_fusionmind.png"
+            alt="FusionMind Logo"
+            className="h-8 w-auto mr-2 object-contain rounded-md drop-shadow-lg"
+          />
+          <span className="text-xl font-semibold text-slate-800 dark:text-white">
+            FusionMind
+          </span>
+        </div>
       </div>
 
       <div className="flex items-center space-x-4">
