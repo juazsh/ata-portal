@@ -8,6 +8,7 @@ import { Button } from "@/components/ui/button"
 import { LoginForm } from "@/components/auth/login-form"
 import { useTheme } from "@/hooks/use-theme"
 import { MoonIcon, SunIcon } from "lucide-react"
+import logoImage from "@/assets/images/logo_fusionmind-min.png";
 
 export default function AuthPage() {
   const { user, isLoading } = useAuth()
@@ -34,7 +35,7 @@ export default function AuthPage() {
         <div className="text-center">
           <div className="flex justify-center mb-6">
             <img
-              src="/src/assets/images/logo_fusionmind.png"
+              src={logoImage}
               alt="FusionMind Logo"
               className="h-20 w-auto object-contain rounded-md drop-shadow-lg"
             />

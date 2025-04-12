@@ -11,6 +11,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import logoImage from "@/assets/images/logo_fusionmind-min.png";
 
 interface HeaderProps {
   toggleSidebar: () => void;
@@ -46,7 +47,7 @@ export function Header({ toggleSidebar }: HeaderProps) {
         </Button>
         <div className="flex items-center">
           <img
-            src="/src/assets/images/logo_fusionmind.png"
+            src={logoImage}
             alt="FusionMind Logo"
             className="h-8 w-auto mr-2 object-contain rounded-md drop-shadow-lg"
           />
