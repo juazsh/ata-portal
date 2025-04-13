@@ -57,11 +57,11 @@ export async function setupAuth(app: Express) {
   await connectToDatabase();
 
   const sessionSettings: session.SessionOptions = {
-    secret: process.env.SESSION_SECRET || "academy-portal-secret-key",
+    secret: process.env.SESSION_SECRET || "fusionmind-secret-key",
     resave: false,
     saveUninitialized: false,
     store: MongoStore.create({
-      mongoUrl: process.env.MONGODB_URI || 'mongodb://localhost:27017/academy-portal',
+      mongoUrl: process.env.MONGODB_URI || 'mongodb://localhost:27017/fusionmind-portal',
       collectionName: 'sessions',
       ttl: 24 * 60 * 60,
     }),

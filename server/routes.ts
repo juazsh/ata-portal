@@ -1,7 +1,8 @@
 import type { Express } from "express";
 import { createServer, type Server } from "http";
 import { setupAuth } from "./auth";
-import { User } from "./lib/mongodb"; // Change this from storage to use MongoDB directly
+import { User } from "./lib/mongodb";
+import { handleContactUs } from "./handlers/utilities";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   // Setup authentication system - add await here
@@ -24,6 +25,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.status(500).json({ message: "Failed to fetch users" });
     }
   });
+
+  // Contact route
+  app.post("/api/contact", handleContactUs);
 
   // Create HTTP server
   const httpServer = createServer(app);
