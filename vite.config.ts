@@ -22,6 +22,11 @@ export default defineConfig({
       ]
       : []),
   ],
+  define: {
+    "process.env": {
+      NEXT_PUBLIC_STRIPE_KEY: process.env.NEXT_PUBLIC_STRIPE_KEY,
+    }
+  },
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "client", "src"),

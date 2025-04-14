@@ -1,4 +1,3 @@
-// models/user.ts
 import mongoose, { Schema, Document } from 'mongoose';
 import bcrypt from 'bcrypt';
 
@@ -29,9 +28,10 @@ export interface IUser extends Document {
   dateOfBirth?: Date;
   createdAt: Date;
   updatedAt: Date;
-  parentId?: mongoose.Types.ObjectId; // Reference to parent (for student accounts)
-  students?: mongoose.Types.ObjectId[]; // References to students (for parent accounts)
+  parentId?: mongoose.Types.ObjectId;
+  students?: mongoose.Types.ObjectId[];
   active: boolean;
+  stripeCustomerId?: string;
   comparePassword(candidatePassword: string): Promise<boolean>;
 }
 
@@ -81,14 +81,13 @@ const UserSchema = new Schema<IUser>(
       ref: 'User',
       required: false
     }],
-    active: { type: Boolean, default: true }
+    active: { type: Boolean, default: true },
+    stripeCustomerId: { type: String, required: false }
   },
   { timestamps: true }
 );
 
-// Hash password before saving
 UserSchema.pre('save', async function (next) {
-  // Only hash the password if it has been modified (or is new)
   if (!this.isModified('password')) return next();
 
   try {
@@ -102,12 +101,10 @@ UserSchema.pre('save', async function (next) {
   }
 });
 
-// Method to compare password for login
 UserSchema.methods.comparePassword = async function (candidatePassword: string): Promise<boolean> {
   return bcrypt.compare(candidatePassword, this.password);
 };
 
-// Create the model or get it if it already exists
 const User = mongoose.models.User || mongoose.model<IUser>('User', UserSchema);
 
 export default User;
