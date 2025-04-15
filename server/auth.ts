@@ -68,8 +68,9 @@ export async function setupAuth(app: Express) {
     cookie: {
       httpOnly: true,
       maxAge: 24 * 60 * 60 * 1000,
-      sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax', // Change this
+      sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
       secure: process.env.NODE_ENV === 'production',
+      domain: process.env.NODE_ENV === 'production' ? process.env.COOKIE_DOMAIN : undefined
     }
   };
 
@@ -236,7 +237,11 @@ export async function setupAuth(app: Express) {
           if (err) {
             return next(err);
           }
-
+          console.log('Login successful, session:', {
+            id: req.sessionID,
+            authenticated: req.isAuthenticated(),
+            user: req.user
+          });
           return res.json({
             id: user.id,
             firstName: user.firstName,
