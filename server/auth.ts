@@ -239,7 +239,6 @@ export async function setupAuth(app: Express) {
           }
           console.log('Login successful, session:', {
             id: req.sessionID,
-            authenticated: req.isAuthenticated(),
             user: req.user
           });
           return res.json({
