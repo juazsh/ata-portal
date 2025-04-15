@@ -4,6 +4,7 @@ import { setupAuth } from "./auth";
 import { User } from "./lib/mongodb";
 import { handleContactUs } from "./handlers/utilities";
 import { addPayment, removePayment, getPaymentMethods } from "./handlers/payment";
+import { addStudent, getStudentById, getStudentsByParent } from "./handlers/students";
 
 export async function registerRoutes(app: Express): Promise<Server> {
 
@@ -23,15 +24,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
-  // Contact route
+  // >> Student routes
+  app.post("/api/students", isAuthenticated, addStudent);
+  app.get("/api/students", isAuthenticated, getStudentsByParent);
+  app.get("/api/students/:studentId", isAuthenticated, getStudentById);
+
+  // >> Contact route
   app.post("/api/contact", handleContactUs);
 
-  // Payment routes
+  // >> Payment routes
   app.post("/api/payments", isAuthenticated, addPayment);
   app.get("/api/payments/:userId", isAuthenticated, getPaymentMethods);
   app.delete("/api/payments/:paymentId", isAuthenticated, removePayment);
 
-  // Create HTTP server
+  // >> Create HTTP server
   const httpServer = createServer(app);
 
   return httpServer;

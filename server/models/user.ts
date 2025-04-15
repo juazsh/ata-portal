@@ -17,6 +17,31 @@ export interface IAddress {
   country: string;
 }
 
+export interface IAchievement {
+  title: string;
+  icon: string;
+  earnedDate: Date;
+}
+
+export interface IClassInfo {
+  name: string;
+  teacher: string;
+  time: string;
+  room: string;
+}
+
+export interface IProgressData {
+  month: string;
+  score: number;
+  date: Date;
+}
+
+export interface ISubjectProgress {
+  subject: string;
+  score: number;
+  lastUpdated: Date;
+}
+
 export interface IUser extends Document {
   firstName: string;
   lastName: string;
@@ -32,6 +57,17 @@ export interface IUser extends Document {
   students?: mongoose.Types.ObjectId[];
   active: boolean;
   stripeCustomerId?: string;
+
+  // Student-specific fields
+  location?: string;
+  level?: string;
+  progress?: number;
+  achievements?: IAchievement[];
+  currentClass?: IClassInfo;
+  nextClass?: IClassInfo;
+  progressData?: IProgressData[];
+  subjectProgress?: ISubjectProgress[];
+
   comparePassword(candidatePassword: string): Promise<boolean>;
 }
 
@@ -41,6 +77,31 @@ const AddressSchema = new Schema<IAddress>({
   state: { type: String, required: false },
   zip: { type: String, required: false },
   country: { type: String, required: false }
+});
+
+const AchievementSchema = new Schema<IAchievement>({
+  title: { type: String, required: true },
+  icon: { type: String, required: true },
+  earnedDate: { type: Date, default: Date.now }
+});
+
+const ClassInfoSchema = new Schema<IClassInfo>({
+  name: { type: String, required: true },
+  teacher: { type: String, required: true },
+  time: { type: String, required: true },
+  room: { type: String, required: true }
+});
+
+const ProgressDataSchema = new Schema<IProgressData>({
+  month: { type: String, required: true },
+  score: { type: Number, required: true },
+  date: { type: Date, default: Date.now }
+});
+
+const SubjectProgressSchema = new Schema<ISubjectProgress>({
+  subject: { type: String, required: true },
+  score: { type: Number, required: true },
+  lastUpdated: { type: Date, default: Date.now }
 });
 
 const UserSchema = new Schema<IUser>(
@@ -82,7 +143,17 @@ const UserSchema = new Schema<IUser>(
       required: false
     }],
     active: { type: Boolean, default: true },
-    stripeCustomerId: { type: String, required: false }
+    stripeCustomerId: { type: String, required: false },
+
+    // Student-specific fields
+    location: { type: String, required: false },
+    level: { type: String, required: false },
+    progress: { type: Number, required: false, default: 0 },
+    achievements: [AchievementSchema],
+    currentClass: { type: ClassInfoSchema, required: false },
+    nextClass: { type: ClassInfoSchema, required: false },
+    progressData: [ProgressDataSchema],
+    subjectProgress: [SubjectProgressSchema]
   },
   { timestamps: true }
 );

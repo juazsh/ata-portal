@@ -1,4 +1,3 @@
-// StudentMenu.tsx
 import { useState, useEffect } from "react";
 import { useAuth } from "@/hooks/use-auth";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
@@ -7,6 +6,18 @@ import { Badge } from "@/components/ui/badge";
 import { Progress } from "@/components/ui/progress";
 import { Separator } from "@/components/ui/separator";
 import { PageHeader } from "@/components/ui/page-header";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { useToast } from "@/hooks/use-toast";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import {
   BarChart,
   Bar,
@@ -25,94 +36,53 @@ import {
   AwardIcon,
   CalendarIcon,
   ClockIcon,
-  BookIcon
+  BookIcon,
+  PlusCircleIcon,
+  AlertCircleIcon,
+  LoaderIcon
 } from "lucide-react";
 
-// I need to see how we will get this from our API
-const mockStudents = [
-  {
-    id: "s1",
-    name: "Emma Johnson",
-    location: "Downtown Learning Center",
-    level: "Intermediate",
-    progress: 68,
-    achievements: [
-      { id: "a1", title: "Perfect Attendance", icon: "🏆" },
-      { id: "a2", title: "Math Champion", icon: "🔢" },
-      { id: "a3", title: "Reading Star", icon: "📚" }
-    ],
-    currentClass: {
-      name: "Algebra Fundamentals",
-      teacher: "Mr. Thompson",
-      time: "Mondays and Wednesdays, 4:00 PM - 5:30 PM",
-      room: "Room 203"
-    },
-    nextClass: {
-      name: "Geometry Basics",
-      teacher: "Ms. Garcia",
-      time: "Starting next semester",
-      room: "Room 210"
-    },
-    progressData: [
-      { month: "Jan", score: 65 },
-      { month: "Feb", score: 68 },
-      { month: "Mar", score: 72 },
-      { month: "Apr", score: 75 },
-      { month: "May", score: 82 },
-      { month: "Jun", score: 87 }
-    ],
-    subjectProgress: [
-      { subject: "Math", score: 85 },
-      { subject: "Science", score: 72 },
-      { subject: "English", score: 90 },
-      { subject: "History", score: 78 },
-      { subject: "Art", score: 95 }
-    ]
-  },
-  {
-    id: "s2",
-    name: "Noah Johnson",
-    location: "Westside Education Center",
-    level: "Advanced",
-    progress: 92,
-    achievements: [
-      { id: "a1", title: "Science Project Winner", icon: "🔬" },
-      { id: "a2", title: "Public Speaking Award", icon: "🎤" },
-      { id: "a3", title: "Reading Challenge", icon: "📚" },
-      { id: "a4", title: "Math Competition", icon: "🔢" }
-    ],
-    currentClass: {
-      name: "Advanced Chemistry",
-      teacher: "Dr. Williams",
-      time: "Tuesdays and Thursdays, 5:00 PM - 6:30 PM",
-      room: "Lab 101"
-    },
-    nextClass: {
-      name: "Physics I",
-      teacher: "Dr. Martinez",
-      time: "Starting next semester",
-      room: "Lab 105"
-    },
-    progressData: [
-      { month: "Jan", score: 88 },
-      { month: "Feb", score: 90 },
-      { month: "Mar", score: 87 },
-      { month: "Apr", score: 92 },
-      { month: "May", score: 94 },
-      { month: "Jun", score: 95 }
-    ],
-    subjectProgress: [
-      { subject: "Math", score: 96 },
-      { subject: "Science", score: 98 },
-      { subject: "English", score: 92 },
-      { subject: "History", score: 87 },
-      { subject: "Art", score: 85 }
-    ]
-  }
-];
+interface Achievement {
+  id?: string;
+  title: string;
+  icon: string;
+}
+
+interface ClassInfo {
+  name: string;
+  teacher: string;
+  time: string;
+  room: string;
+}
+
+interface ProgressData {
+  month: string;
+  score: number;
+}
+
+interface SubjectProgress {
+  subject: string;
+  score: number;
+}
+
+interface Student {
+  id: string;
+  firstName: string;
+  lastName: string;
+  location?: string;
+  level?: string;
+  progress?: number;
+  achievements?: Achievement[];
+  currentClass?: ClassInfo;
+  nextClass?: ClassInfo;
+  progressData?: ProgressData[];
+  subjectProgress?: SubjectProgress[];
+  dateOfBirth?: string;
+  email?: string;
+}
 
 
-function AchievementBadge({ title, icon }) {
+function AchievementBadge({ title, icon }: { title: string; icon: string }) {
   return (
     <div className="flex flex-col items-center justify-center p-2 m-2 bg-primary-50 dark:bg-slate-800 rounded-lg w-24">
       <div className="text-3xl mb-1">{icon}</div>
@@ -121,8 +91,9 @@ function AchievementBadge({ title, icon }) {
   );
 }
 
-
 function ClassCard({ classData, isNext = false }) {
+  if (!classData) return null;
+
   return (
     <Card className={isNext ? "bg-slate-50 dark:bg-slate-900" : ""}>
       <CardHeader className="pb-2">
@@ -152,8 +123,18 @@ function ClassCard({ classData, isNext = false }) {
   );
 }
 
+function ProgressChart({ data }: { data: ProgressData[] }) {
+  if (!data || data.length === 0) {
+    return (
+      <div className="h-64 w-full flex items-center justify-center">
+        <div className="text-center text-slate-500">
+          <AlertCircleIcon className="h-10 w-10 mx-auto mb-2" />
+          <p>No progress data available yet</p>
+        </div>
+      </div>
+    );
+  }
 
-function ProgressChart({ data }) {
   return (
     <div className="h-64 w-full mt-4">
       <ResponsiveContainer width="100%" height="100%">
@@ -169,7 +150,18 @@ function ProgressChart({ data }) {
   );
 }
 
-function SubjectsChart({ data }) {
+function SubjectsChart({ data }: { data: SubjectProgress[] }) {
+  if (!data || data.length === 0) {
+    return (
+      <div className="h-64 w-full flex items-center justify-center">
+        <div className="text-center text-slate-500">
+          <AlertCircleIcon className="h-10 w-10 mx-auto mb-2" />
+          <p>No subject data available yet</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="h-64 w-full mt-4">
       <ResponsiveContainer width="100%" height="100%">
@@ -185,59 +177,61 @@ function SubjectsChart({ data }) {
   );
 }
 
+function StudentDetails({ student }: { student: Student }) {
+  if (!student) return null;
 
-function StudentDetails({ student }) {
   return (
     <div className="space-y-6">
-      {/* Student Basic Info */}
       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
         <div className="flex flex-col items-center p-4 bg-white dark:bg-slate-800 rounded-lg shadow-sm">
           <MapPinIcon className="h-6 w-6 mb-2 text-primary" />
           <h3 className="text-sm font-medium text-slate-500">Location</h3>
-          <p className="text-lg font-medium text-center">{student.location}</p>
+          <p className="text-lg font-medium text-center">{student.location || "Not assigned"}</p>
         </div>
 
         <div className="flex flex-col items-center p-4 bg-white dark:bg-slate-800 rounded-lg shadow-sm">
           <GraduationCapIcon className="h-6 w-6 mb-2 text-primary" />
           <h3 className="text-sm font-medium text-slate-500">Level</h3>
-          <p className="text-lg font-medium">{student.level}</p>
+          <p className="text-lg font-medium">{student.level || "Not assigned"}</p>
         </div>
 
         <div className="flex flex-col items-center p-4 bg-white dark:bg-slate-800 rounded-lg shadow-sm">
           <BarChartIcon className="h-6 w-6 mb-2 text-primary" />
           <h3 className="text-sm font-medium text-slate-500">Overall Progress</h3>
           <div className="w-full mt-2">
-            <Progress value={student.progress} className="h-2" />
-            <p className="text-center mt-1">{student.progress}%</p>
+            <Progress value={student.progress || 0} className="h-2" />
+            <p className="text-center mt-1">{student.progress || 0}%</p>
           </div>
         </div>
       </div>
 
+      {student.progressData && student.progressData.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg">Progress Over Time</CardTitle>
+            <CardDescription>
+              Monthly performance tracking and assessment results
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <ProgressChart data={student.progressData} />
+          </CardContent>
+        </Card>
+      )}
 
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-lg">Progress Over Time</CardTitle>
-          <CardDescription>
-            Monthly performance tracking and assessment results
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <ProgressChart data={student.progressData} />
-        </CardContent>
-      </Card>
-
-      <Card>
-        <CardHeader>
-          <CardTitle className="text-lg">Subject Performance</CardTitle>
-          <CardDescription>
-            Current scores across all subjects
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <SubjectsChart data={student.subjectProgress} />
-        </CardContent>
-      </Card>
-
+      {student.subjectProgress && student.subjectProgress.length > 0 && (
+        <Card>
+          <CardHeader>
+            <CardTitle className="text-lg">Subject Performance</CardTitle>
+            <CardDescription>
+              Current scores across all subjects
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <SubjectsChart data={student.subjectProgress} />
+          </CardContent>
+        </Card>
+      )}
 
       <Card>
         <CardHeader>
@@ -248,17 +242,20 @@ function StudentDetails({ student }) {
         </CardHeader>
         <CardContent>
           <div className="flex flex-wrap justify-center md:justify-start">
-            {student.achievements.map((achievement) => (
-              <AchievementBadge
-                key={achievement.id}
-                title={achievement.title}
-                icon={achievement.icon}
-              />
-            ))}
+            {student.achievements && student.achievements.length > 0 ? (
+              student.achievements.map((achievement, index) => (
+                <AchievementBadge
+                  key={achievement.id || `achievement-${index}`}
+                  title={achievement.title}
+                  icon={achievement.icon}
+                />
+              ))
+            ) : (
+              <p className="text-center w-full text-slate-500">No achievements yet</p>
+            )}
           </div>
         </CardContent>
       </Card>
-
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
         <div>
@@ -266,7 +263,15 @@ function StudentDetails({ student }) {
             <BookIcon className="h-5 w-5 mr-2 text-primary" />
             Current Class
           </h3>
-          <ClassCard classData={student.currentClass} />
+          {student.currentClass ? (
+            <ClassCard classData={student.currentClass} />
+          ) : (
+            <Card>
+              <CardContent className="py-6">
+                <p className="text-center text-slate-500">No current class assigned</p>
+              </CardContent>
+            </Card>
+          )}
         </div>
 
         <div>
@@ -274,90 +279,474 @@ function StudentDetails({ student }) {
             <CalendarIcon className="h-5 w-5 mr-2 text-primary" />
             Next Class
           </h3>
-          <ClassCard classData={student.nextClass} isNext={true} />
+          {student.nextClass ? (
+            <ClassCard classData={student.nextClass} isNext={true} />
+          ) : (
+            <Card className="bg-slate-50 dark:bg-slate-900">
+              <CardContent className="py-6">
+                <p className="text-center text-slate-500">No upcoming class scheduled</p>
+              </CardContent>
+            </Card>
+          )}
         </div>
       </div>
     </div>
   );
 }
 
-export default function StudentMenu() {
-  const { user } = useAuth();
-  const [students, setStudents] = useState(mockStudents);
-  const [loading, setLoading] = useState(true);
+function AddStudentModal({ isOpen, onClose, onAddStudent }) {
+  const [formData, setFormData] = useState({
+    firstName: "",
+    lastName: "",
+    dateOfBirth: "",
+    email: "",
+    phone: "",
+    password: "",
+    confirmPassword: ""
+  });
+  const [errors, setErrors] = useState({});
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const { toast } = useToast();
 
-  useEffect(() => {
-    // Simulate API call
-    const fetchStudents = async () => {
-      try {
-        // const response = await fetchStudentsByParentId(user.id);
-        // setStudents(response.data);
-        setLoading(false);
-      } catch (error) {
-        console.error("Error fetching students:", error);
-        setLoading(false);
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setFormData({
+      ...formData,
+      [name]: value
+    });
+
+    // Clear specific error when field is modified
+    if (errors[name]) {
+      setErrors({
+        ...errors,
+        [name]: ""
+      });
+    }
+  };
+
+  const validateForm = () => {
+    const newErrors = {};
+
+    if (!formData.firstName.trim()) newErrors.firstName = "First name is required";
+    if (!formData.lastName.trim()) newErrors.lastName = "Last name is required";
+    if (!formData.dateOfBirth) newErrors.dateOfBirth = "Date of birth is required";
+
+    if (!formData.email.trim()) {
+      newErrors.email = "Email is required";
+    } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(formData.email)) {
+      newErrors.email = "Invalid email format";
+    }
+
+    if (!formData.password) {
+      newErrors.password = "Password is required";
+    } else if (formData.password.length < 8) {
+      newErrors.password = "Password must be at least 8 characters";
+    }
+
+    if (formData.password !== formData.confirmPassword) {
+      newErrors.confirmPassword = "Passwords don't match";
+    }
+
+    setErrors(newErrors);
+    return Object.keys(newErrors).length === 0;
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+
+    if (!validateForm()) return;
+
+    setIsSubmitting(true);
+
+    try {
+      const studentData = {
+        firstName: formData.firstName,
+        lastName: formData.lastName,
+        dateOfBirth: formData.dateOfBirth,
+        email: formData.email,
+        phone: formData.phone || null,
+        password: formData.password
+      };
+
+      const response = await fetch('/api/students', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(studentData),
+        credentials: 'include'
+      });
+
+      if (!response.ok) {
+        const errorData = await response.json().catch(() => null);
+        const errorMsg = errorData?.message || `Error: ${response.status} ${response.statusText}`;
+
+
+        if (response.status === 409) {
+          setErrors({ email: "This email is already in use" });
+          throw new Error("This email is already in use");
+        } else {
+          throw new Error(errorMsg);
+        }
       }
-    };
 
-    fetchStudents();
-  }, [user]);
+      const result = await response.json();
 
-  if (loading) {
-    return <div className="p-8">Loading student information...</div>;
-  }
 
-  if (!students || students.length === 0) {
-    return (
-      <div className="px-4 py-6 sm:px-6 lg:px-8">
-        <PageHeader
-          title="My Students"
-          description="View detailed information about your students"
-        />
-        <Card className="mt-6">
-          <CardContent className="flex flex-col items-center justify-center p-12">
-            <GraduationCapIcon className="h-16 w-16 text-slate-300 dark:text-slate-600 mb-4" />
-            <h3 className="text-xl font-medium mb-2">No Students Found</h3>
-            <p className="text-slate-500 dark:text-slate-400 text-center max-w-md">
-              You currently don't have any students associated with your account. If you believe this is an error, please contact the administrator.
-            </p>
-          </CardContent>
-        </Card>
-      </div>
-    );
-  }
+      onAddStudent(result.student);
+
+      toast({
+        title: "Success",
+        description: "Student added successfully",
+        variant: "success"
+      });
+
+      // Reset form
+      setFormData({
+        firstName: "",
+        lastName: "",
+        dateOfBirth: "",
+        email: "",
+        phone: "",
+        password: "",
+        confirmPassword: ""
+      });
+
+      onClose();
+    } catch (error) {
+      console.error("Error adding student:", error);
+
+      toast({
+        title: "Error",
+        description: error.message || "Failed to add student",
+        variant: "destructive"
+      });
+
+      if (!errors.email && !errors.submit) {
+        setErrors({
+          submit: error.message || "Failed to add student"
+        });
+      }
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
 
   return (
-    <div className="px-4 py-6 sm:px-6 lg:px-8">
-      <PageHeader
-        title="My Students"
-        description="View detailed information about your students"
-        badge={{ text: "PARENT", variant: "outline" }}
-      />
+    <Dialog open={isOpen} onOpenChange={onClose}>
+      <DialogContent className="sm:max-w-md md:max-w-lg">
+        <DialogHeader>
+          <DialogTitle>Add New Student</DialogTitle>
+          <DialogDescription>
+            Enter your child's information to register them as a student.
+          </DialogDescription>
+        </DialogHeader>
 
-      <Tabs defaultValue={students[0].id} className="mt-6">
-        <TabsList className="mb-4 w-full flex overflow-x-auto">
-          {students.map((student) => (
-            <TabsTrigger
-              key={student.id}
-              value={student.id}
-              className="flex-1 min-w-fit"
+        <form onSubmit={handleSubmit} className="space-y-4 py-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="firstName">First Name*</Label>
+              <Input
+                id="firstName"
+                name="firstName"
+                value={formData.firstName}
+                onChange={handleChange}
+                required
+                className={errors.firstName ? "border-red-500" : ""}
+                disabled={isSubmitting}
+              />
+              {errors.firstName && (
+                <p className="text-xs text-red-500">{errors.firstName}</p>
+              )}
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="lastName">Last Name*</Label>
+              <Input
+                id="lastName"
+                name="lastName"
+                value={formData.lastName}
+                onChange={handleChange}
+                required
+                className={errors.lastName ? "border-red-500" : ""}
+                disabled={isSubmitting}
+              />
+              {errors.lastName && (
+                <p className="text-xs text-red-500">{errors.lastName}</p>
+              )}
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="dateOfBirth">Date of Birth*</Label>
+            <Input
+              id="dateOfBirth"
+              name="dateOfBirth"
+              type="date"
+              value={formData.dateOfBirth}
+              onChange={handleChange}
+              required
+              className={errors.dateOfBirth ? "border-red-500" : ""}
+              disabled={isSubmitting}
+            />
+            {errors.dateOfBirth && (
+              <p className="text-xs text-red-500">{errors.dateOfBirth}</p>
+            )}
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="email">Email Address*</Label>
+            <Input
+              id="email"
+              name="email"
+              type="email"
+              value={formData.email}
+              onChange={handleChange}
+              required
+              className={errors.email ? "border-red-500" : ""}
+              disabled={isSubmitting}
+            />
+            {errors.email && (
+              <p className="text-xs text-red-500">{errors.email}</p>
+            )}
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="phone">Phone Number (Optional)</Label>
+            <Input
+              id="phone"
+              name="phone"
+              type="tel"
+              value={formData.phone}
+              onChange={handleChange}
+              disabled={isSubmitting}
+            />
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <Label htmlFor="password">Password*</Label>
+              <Input
+                id="password"
+                name="password"
+                type="password"
+                value={formData.password}
+                onChange={handleChange}
+                required
+                className={errors.password ? "border-red-500" : ""}
+                disabled={isSubmitting}
+              />
+              {errors.password && (
+                <p className="text-xs text-red-500">{errors.password}</p>
+              )}
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="confirmPassword">Confirm Password*</Label>
+              <Input
+                id="confirmPassword"
+                name="confirmPassword"
+                type="password"
+                value={formData.confirmPassword}
+                onChange={handleChange}
+                required
+                className={errors.confirmPassword ? "border-red-500" : ""}
+                disabled={isSubmitting}
+              />
+              {errors.confirmPassword && (
+                <p className="text-xs text-red-500">{errors.confirmPassword}</p>
+              )}
+            </div>
+          </div>
+
+          {errors.submit && (
+            <div className="p-3 bg-red-50 border border-red-200 rounded-md">
+              <p className="text-sm text-red-600">{errors.submit}</p>
+            </div>
+          )}
+
+          <DialogFooter className="mt-6">
+            <Button
+              type="button"
+              variant="outline"
+              onClick={onClose}
+              disabled={isSubmitting}
             >
-              {student.name}
-            </TabsTrigger>
-          ))}
-        </TabsList>
+              Cancel
+            </Button>
+            <Button type="submit" disabled={isSubmitting}>
+              {isSubmitting ? (
+                <>
+                  <LoaderIcon className="mr-2 h-4 w-4 animate-spin" />
+                  Adding...
+                </>
+              ) : (
+                "Add Student"
+              )}
+            </Button>
+          </DialogFooter>
+        </form>
+      </DialogContent>
+    </Dialog>
+  );
+}
 
-        {students.map((student) => (
-          <TabsContent key={student.id} value={student.id} className="space-y-4">
-            <h2 className="text-2xl font-semibold flex items-center">
-              <GraduationCapIcon className="inline-block h-6 w-6 mr-2 text-primary" />
-              {student.name}
-            </h2>
-            <Separator className="my-4" />
-            <StudentDetails student={student} />
-          </TabsContent>
-        ))}
-      </Tabs>
+export default function StudentMenu() {
+  const { user } = useAuth();
+  const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
+  const [students, setStudents] = useState<Student[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [showAddModal, setShowAddModal] = useState(false);
+  const { toast } = useToast();
+
+  useEffect(() => {
+    async function fetchStudents() {
+      try {
+        setLoading(true);
+        setError(null);
+
+        const response = await fetch(`/api/students?parentId=${user?.id}`, {
+          credentials: 'include'
+        });
+
+        if (!response.ok) {
+          throw new Error(`Error: ${response.status} ${response.statusText}`);
+        }
+
+        const data = await response.json();
+
+        if (data && Array.isArray(data) && data.length === 0) {
+          setStudents([]);
+          setSelectedStudent(null);
+        } else {
+          setStudents(data);
+          if (data.length > 0 && !selectedStudent) {
+            setSelectedStudent(data[0]);
+          }
+        }
+      } catch (err) {
+        console.error("Failed to fetch students:", err);
+        setError("Failed to load students. Please try again later.");
+        // Show error toast
+        toast({
+          title: "Error",
+          description: "Failed to load students.",
+          variant: "destructive"
+        });
+      } finally {
+        setLoading(false);
+      }
+    }
+
+    if (user?.id) {
+      fetchStudents();
+    }
+  }, [user?.id]);
+
+  const handleAddStudent = async (newStudent) => {
+
+    setStudents(prevStudents => [...prevStudents, newStudent]);
+
+    if (students.length === 0) {
+      setSelectedStudent(newStudent);
+    }
+
+    return newStudent;
+  };
+
+  const handleSelectStudent = (student) => {
+    setSelectedStudent(student);
+  };
+
+  return (
+    <div className="container mx-auto px-4 py-6">
+      <PageHeader
+        title="Student Dashboard"
+        description="View and manage your student's progress and classes"
+        className="mb-6"
+      >
+        <Button onClick={() => setShowAddModal(true)} className="flex items-center">
+          <PlusCircleIcon className="h-4 w-4 mr-2" />
+          Add Student
+        </Button>
+      </PageHeader>
+
+      {loading ? (
+        <div className="flex justify-center py-12">
+          <div className="text-center">
+            <LoaderIcon className="h-8 w-8 mx-auto mb-4 animate-spin text-primary" />
+            <p>Loading student data...</p>
+          </div>
+        </div>
+      ) : students.length === 0 ? (
+        <div className="text-center py-12 bg-slate-50 dark:bg-slate-900 rounded-lg">
+          <div className="max-w-md mx-auto p-6">
+            <GraduationCapIcon className="h-12 w-12 mx-auto mb-4 text-slate-400" />
+            <h3 className="text-lg font-medium mb-2">No students found</h3>
+            <p className="text-slate-500 mb-6">
+              You haven't added any students yet. Get started by adding your first student.
+            </p>
+            <Button onClick={() => setShowAddModal(true)} className="flex items-center mx-auto">
+              <PlusCircleIcon className="h-4 w-4 mr-2" />
+              Add Your First Student
+            </Button>
+          </div>
+        </div>
+      ) : (
+        <div className="space-y-6">
+          { }
+          {students.length > 1 && (
+            <Tabs
+              defaultValue={selectedStudent?.id || selectedStudent?._id}
+              value={selectedStudent?.id || selectedStudent?._id}
+              onValueChange={(value) => {
+                console.log("Tab value changed to:", value);
+                const student = students.find((s) => s.id === value || s._id === value);
+                if (student) {
+                  console.log("Found student:", student);
+                  setSelectedStudent(student);
+                } else {
+                  console.error("No student found for the selected tab value:", value);
+                }
+              }}
+              className="mb-6"
+            >
+              <TabsList className="mb-4">
+                {students.map((student) => {
+                  const studentId = student.id || student._id;
+                  if (!studentId) {
+                    console.error("Student is missing an ID:", student);
+                  }
+                  return (
+                    <TabsTrigger key={studentId} value={studentId}>
+                      {student.firstName} {student.lastName}
+                    </TabsTrigger>
+                  );
+                })}
+              </TabsList>
+            </Tabs>
+          )}
+
+          {selectedStudent && (
+            <>
+              <div className="flex justify-between items-center mb-6">
+                <h2 className="text-2xl font-bold">
+                  {selectedStudent.firstName} {selectedStudent.lastName}
+                </h2>
+              </div>
+
+              <StudentDetails student={selectedStudent} />
+            </>
+          )}
+        </div>
+      )}
+
+      <AddStudentModal
+        isOpen={showAddModal}
+        onClose={() => setShowAddModal(false)}
+        onAddStudent={handleAddStudent}
+      />
     </div>
   );
 }
