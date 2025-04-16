@@ -39,7 +39,6 @@ export function PaymentMethodModal({ open, onOpenChange, onSuccess }: PaymentMet
       return;
     }
     const stripeKey = process.env.NEXT_PUBLIC_STRIPE_KEY;
-    console.log(stripeKey)
 
     if (!stripeKey) {
       console.error('Stripe key missing: NEXT_PUBLIC_STRIPE_KEY');

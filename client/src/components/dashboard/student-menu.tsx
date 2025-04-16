@@ -715,7 +715,6 @@ export default function StudentMenu() {
                 console.log("Tab value changed to:", value);
                 const student = students.find((s) => s.id === value || s._id === value);
                 if (student) {
-                  console.log("Found student:", student);
                   setSelectedStudent(student);
                 } else {
                   console.error("No student found for the selected tab value:", value);
