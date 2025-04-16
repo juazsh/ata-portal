@@ -10,7 +10,6 @@ import { connectToDatabase, User } from "./lib/mongodb";
 import { loginUserSchema } from "@shared/schema";
 import { UserRole } from "./models/user";
 
-// JWT configuration
 const JWT_SECRET = process.env.JWT_SECRET || "fusionmind-jwt-secret-key";
 const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || "24h";
 

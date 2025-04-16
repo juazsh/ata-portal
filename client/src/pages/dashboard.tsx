@@ -25,6 +25,7 @@ import {
   HomeIcon,
   GraduationCapIcon,
   BookOpenIcon,
+  BookIcon,
   UserIcon,
   CreditCardIcon,
   HistoryIcon,
@@ -38,6 +39,7 @@ import { PageHeader } from "@/components/ui/page-header";
 import { PaymentMethodModal } from "@/components/dashboard/payment-method-modal";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { useToast } from "@/hooks/use-toast";
+import { is } from "drizzle-orm";
 
 function getAuthHeaders() {
   const token = localStorage.getItem('auth_token');
@@ -73,6 +75,7 @@ export default function Dashboard() {
   const [isAddTeacherMatch] = useRoute("/add-teacher");
   const [isAddStudentMatch] = useRoute("/add-student");
   const [isAddLocationMatch] = useRoute("/add-location");
+  const [isProgramsMatch] = useRoute("/programs");
 
   return (
     <div className="min-h-screen flex flex-col md:flex-row bg-white dark:bg-slate-950">
@@ -85,6 +88,7 @@ export default function Dashboard() {
         {isAddLocationMatch && <AddLocationPage />}
         {isPaymentInfoMatch && <PaymentInfoPage />}
         {isTransactionHistoryMatch && <TransactionHistoryPage />}
+        {isProgramsMatch && <ProgramsPage />}
         {isAccountInfoMatch && <AccountInfoPage />}
         {isContactMatch && <ContactPage />}
         {isProgressMatch && <ProgressPage />}
@@ -97,6 +101,7 @@ export default function Dashboard() {
           !isAddLocationMatch &&
           !isPaymentInfoMatch &&
           !isTransactionHistoryMatch &&
+          !isProgramsMatch &&
           !isAccountInfoMatch &&
           !isContactMatch &&
           !isProgressMatch &&
@@ -537,6 +542,37 @@ function TransactionHistoryPage() {
           <div className="p-4 bg-slate-100 dark:bg-slate-800 rounded-lg text-center">
             <HistoryIcon className="h-12 w-12 mx-auto text-primary mb-2" />
             <p>Transaction history will appear here</p>
+          </div>
+        </CardContent>
+      </Card>
+    </div>
+  );
+}
+
+function ProgramsPage() {
+  return (
+    <div className="px-4 py-6 sm:px-6 lg:px-8">
+      <PageHeader
+        title="Programs"
+        description="Available Programs on FusionMind"
+      >
+        {/* <Button variant="outline" className="flex items-center gap-2">
+          <HistoryIcon className="h-4 w-4" />
+          Export History
+        </Button> */}
+      </PageHeader>
+
+      <Card className="mt-6">
+        <CardHeader>
+          <CardTitle>Our Amazing Offerings</CardTitle>
+          <CardDescription>
+            See our available programs and courses
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="p-4 bg-slate-100 dark:bg-slate-800 rounded-lg text-center">
+            <BookIcon className="h-12 w-12 mx-auto text-primary mb-2" />
+            <p>Programs will appear here</p>
           </div>
         </CardContent>
       </Card>

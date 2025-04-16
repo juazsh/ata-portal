@@ -19,6 +19,7 @@ function Router() {
       <ProtectedRoute path="/contact" component={Dashboard} />
       <ProtectedRoute path="/progress" component={Dashboard} />
       <ProtectedRoute path="/classes" component={Dashboard} />
+      <ProtectedRoute path="/programs" component={Dashboard} />
       <ProtectedRoute path="/add-teacher" component={Dashboard} />
       <ProtectedRoute path="/add-student" component={Dashboard} />
 

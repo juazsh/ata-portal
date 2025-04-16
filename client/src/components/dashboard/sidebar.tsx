@@ -70,6 +70,11 @@ export function Sidebar({ isOpen, setIsOpen }: SidebarProps) {
           path: "/payment-info",
         },
         {
+          name: "Programs",
+          icon: BookIcon,
+          path: "/programs",
+        },
+        {
           name: "divider-1",
           isDivider: true,
         },
@@ -220,6 +225,11 @@ export function Sidebar({ isOpen, setIsOpen }: SidebarProps) {
         {
           name: "divider-1",
           isDivider: true,
+        },
+        {
+          name: "Programs",
+          icon: BookIcon,
+          path: "/programs",
         },
         {
           name: "Locations",
