@@ -39,6 +39,11 @@ import { PaymentMethodModal } from "@/components/dashboard/payment-method-modal"
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { useToast } from "@/hooks/use-toast";
 
+function getAuthHeaders() {
+  const token = localStorage.getItem('auth_token');
+  return token ? { 'Authorization': `Bearer ${token}` } : {};
+}
+
 export default function Dashboard() {
   const [isSidebarOpen, setIsSidebarOpen] = useState(false);
   const { user, logoutMutation } = useAuth();
@@ -48,9 +53,13 @@ export default function Dashboard() {
     setIsSidebarOpen(!isSidebarOpen);
   };
 
-  const handleLogout = () => {
-    logoutMutation.mutate();
-    navigate("/auth");
+  const handleLogout = async () => {
+    try {
+      await logoutMutation.mutateAsync();
+      navigate("/auth");
+    } catch (error) {
+      console.error("Logout error:", error);
+    }
   };
 
   const [isRootMatch] = useRoute("/");
@@ -99,7 +108,7 @@ export default function Dashboard() {
   );
 }
 
-// Dashboard Home Page component
+// >> Dashboard Home Page component
 // >> we need to move this to a separate file as a component
 function HomePage() {
   const { user } = useAuth();
@@ -117,7 +126,17 @@ function HomePage() {
 
     try {
       setIsLoading(true);
-      const response = await fetch(`/api/payments/${user.id}`);
+      const token = localStorage.getItem('auth_token');
+
+      if (!token) {
+        throw new Error('Authentication required');
+      }
+
+      const response = await fetch(`/api/payments/${user.id}`, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
 
       if (!response.ok) {
         throw new Error('Failed to fetch payment methods');
@@ -137,25 +156,27 @@ function HomePage() {
     }
   };
 
-  useEffect(() => {
-    if (user?.id) {
-      fetchPaymentMethods();
-    }
-  }, [user?.id]);
-
   const handleRemovePaymentMethod = async () => {
     if (!confirmRemove.id) return;
 
     try {
+      const token = localStorage.getItem('auth_token');
+
+      if (!token) {
+        throw new Error('Authentication required');
+      }
+
       const response = await fetch(`/api/payments/${confirmRemove.id}`, {
         method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
       });
 
       if (!response.ok) {
         const data = await response.json();
         throw new Error(data.message || 'Failed to remove payment method');
       }
-
 
       setPaymentMethods(prevMethods =>
         prevMethods.filter(method => method.id !== confirmRemove.id)
@@ -726,6 +747,29 @@ function RefreshIcon(props: React.SVGProps<SVGSVGElement>) {
       <path d="M3 3v5h5" />
       <path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16" />
       <path d="M16 16h5v5" />
+    </svg>
+  );
+}
+
+function TrashIcon(props: React.SVGProps<SVGSVGElement>) {
+  return (
+    <svg
+      {...props}
+      xmlns="http://www.w3.org/2000/svg"
+      width="24"
+      height="24"
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="2"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+    >
+      <path d="M3 6h18" />
+      <path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6" />
+      <path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2" />
+      <line x1="10" y1="11" x2="10" y2="17" />
+      <line x1="14" y1="11" x2="14" y2="17" />
     </svg>
   );
 }

@@ -315,7 +315,6 @@ function AddStudentModal({ isOpen, onClose, onAddStudent }) {
       [name]: value
     });
 
-    // Clear specific error when field is modified
     if (errors[name]) {
       setErrors({
         ...errors,
@@ -359,6 +358,11 @@ function AddStudentModal({ isOpen, onClose, onAddStudent }) {
     setIsSubmitting(true);
 
     try {
+      const token = localStorage.getItem('auth_token');
+      if (!token) {
+        throw new Error("Authentication token not found");
+      }
+
       const studentData = {
         firstName: formData.firstName,
         lastName: formData.lastName,
@@ -371,16 +375,15 @@ function AddStudentModal({ isOpen, onClose, onAddStudent }) {
       const response = await fetch('/api/students', {
         method: 'POST',
         headers: {
-          'Content-Type': 'application/json'
+          'Content-Type': 'application/json',
+          'Authorization': `Bearer ${token}`
         },
-        body: JSON.stringify(studentData),
-        credentials: 'include'
+        body: JSON.stringify(studentData)
       });
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => null);
         const errorMsg = errorData?.message || `Error: ${response.status} ${response.statusText}`;
-
 
         if (response.status === 409) {
           setErrors({ email: "This email is already in use" });
@@ -392,7 +395,6 @@ function AddStudentModal({ isOpen, onClose, onAddStudent }) {
 
       const result = await response.json();
 
-
       onAddStudent(result.student);
 
       toast({
@@ -401,7 +403,6 @@ function AddStudentModal({ isOpen, onClose, onAddStudent }) {
         variant: "success"
       });
 
-      // Reset form
       setFormData({
         firstName: "",
         lastName: "",
@@ -606,9 +607,21 @@ export default function StudentMenu() {
         setLoading(true);
         setError(null);
 
+        const token = localStorage.getItem('auth_token');
+        if (!token) {
+          throw new Error('No authentication token found');
+        }
+
         const response = await fetch(`/api/students?parentId=${user?.id}`, {
-          credentials: 'include'
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
         });
+
+        if (response.status === 401) {
+          localStorage.removeItem('auth_token');
+          throw new Error('Session expired. Please log in again.');
+        }
 
         if (!response.ok) {
           throw new Error(`Error: ${response.status} ${response.statusText}`);
@@ -628,10 +641,10 @@ export default function StudentMenu() {
       } catch (err) {
         console.error("Failed to fetch students:", err);
         setError("Failed to load students. Please try again later.");
-        // Show error toast
+
         toast({
           title: "Error",
-          description: "Failed to load students.",
+          description: err.message || "Failed to load students.",
           variant: "destructive"
         });
       } finally {
@@ -645,7 +658,6 @@ export default function StudentMenu() {
   }, [user?.id]);
 
   const handleAddStudent = async (newStudent) => {
-
     setStudents(prevStudents => [...prevStudents, newStudent]);
 
     if (students.length === 0) {
@@ -695,7 +707,6 @@ export default function StudentMenu() {
         </div>
       ) : (
         <div className="space-y-6">
-          { }
           {students.length > 1 && (
             <Tabs
               defaultValue={selectedStudent?.id || selectedStudent?._id}

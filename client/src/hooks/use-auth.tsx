@@ -24,6 +24,8 @@ type AuthContextType = {
 
 export const AuthContext = createContext<AuthContextType | null>(null);
 
+const getAuthToken = () => localStorage.getItem('auth_token');
+
 export function AuthProvider({ children }: { children: ReactNode }) {
   const { toast } = useToast();
   const queryClient = useQueryClient();
@@ -37,11 +39,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     queryKey: ["/api/user"],
     queryFn: async ({ queryKey }) => {
       try {
+        const token = getAuthToken();
+
+        if (!token) {
+          return null;
+        }
+
         const res = await fetch(queryKey[0] as string, {
-          credentials: "include",
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
         });
 
         if (res.status === 401) {
+          localStorage.removeItem('auth_token');
           return null;
         }
 
@@ -60,7 +71,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const loginMutation = useMutation({
     mutationFn: async (credentials: LoginData) => {
-      // Extract rememberMe from credentials
       const { rememberMe, ...loginData } = credentials;
 
       const response = await fetch('/api/login', {
@@ -69,7 +79,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify(loginData),
-        credentials: 'include',
       });
 
       if (!response.ok) {
@@ -77,10 +86,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         throw new Error(errorData.message || 'Login failed');
       }
 
-      return await response.json();
+      const data = await response.json();
+
+      localStorage.setItem('auth_token', data.token);
+
+      return data.user;
     },
     onSuccess: (userData: SelectUser) => {
-      // Transform the data to match the expected schema
       const adaptedUser = {
         ...userData,
         fullName: `${userData.firstName} ${userData.lastName}`,
@@ -109,7 +121,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           'Content-Type': 'application/json',
         },
         body: JSON.stringify(userData),
-        credentials: 'include',
       });
 
       if (!response.ok) {
@@ -117,10 +128,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         throw new Error(errorData.message || 'Registration failed');
       }
 
-      return await response.json();
+      const data = await response.json();
+
+      localStorage.setItem('auth_token', data.token);
+
+      return data.user;
     },
     onSuccess: (userData: any) => {
-      // Transform the data to match the expected schema
       const adaptedUser = {
         ...userData,
         fullName: `${userData.firstName} ${userData.lastName}`,
@@ -143,8 +157,17 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const logoutMutation = useMutation({
     mutationFn: async () => {
+      const token = getAuthToken();
+
+      if (!token) {
+        throw new Error('No active session');
+      }
+
       const response = await fetch('/api/logout', {
         method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        },
         credentials: 'include',
       });
 
@@ -152,6 +175,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         const errorData = await response.json();
         throw new Error(errorData.message || 'Logout failed');
       }
+
+      localStorage.removeItem('auth_token');
     },
     onSuccess: () => {
       queryClient.setQueryData(["/api/user"], null);
@@ -169,8 +194,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   });
 
   useEffect(() => {
-    const handleStorageChange = () => {
-      refetchUser();
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === 'auth_token') {
+        refetchUser();
+      }
     };
 
     window.addEventListener('storage', handleStorageChange);

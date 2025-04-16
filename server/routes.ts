@@ -8,10 +8,6 @@ import { addStudent, getStudentById, getStudentsByParent } from "./handlers/stud
 
 export async function registerRoutes(app: Express): Promise<Server> {
 
-  app.use((req, res, next) => {
-    console.log(`Request path: ${req.path}}, SessionID: ${req.sessionID}`);
-    next();
-  });
   const { isAuthenticated, hasRole } = await setupAuth(app);
 
   app.get("/api/users", isAuthenticated, async (req, res) => {

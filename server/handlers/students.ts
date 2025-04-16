@@ -21,6 +21,8 @@ export const addStudent = async (req: Request, res: Response) => {
       return res.status(403).json({ message: "Only parents or admins can add students" });
     }
 
+    const userParentId = parentId || req.user.id;
+
     if (parentId && parentId !== req.user.id && req.user.role !== UserRole.ADMIN) {
       return res.status(403).json({ message: "You can only add students to your own account" });
     }
@@ -38,9 +40,9 @@ export const addStudent = async (req: Request, res: Response) => {
       phone: phone || null,
       dateOfBirth: new Date(dateOfBirth),
       role: UserRole.STUDENT,
-      parentId: parentId || req.user.id,
+      parentId: userParentId,
 
-      // >> Default values for student dashboard
+      // Default values for student dashboard
       location: "Main Learning Center",
       level: "Beginner",
       progress: 0,
@@ -59,7 +61,7 @@ export const addStudent = async (req: Request, res: Response) => {
     await newStudent.save();
 
     await User.findByIdAndUpdate(
-      parentId || req.user.id,
+      userParentId,
       { $push: { students: newStudent._id } }
     );
 
@@ -80,12 +82,15 @@ export const getStudentsByParent = async (req: Request, res: Response) => {
   try {
     const { parentId } = req.query;
 
-    if (req.user?.role !== UserRole.ADMIN && req.user?.id !== parentId) {
+    // Use JWT user id if no parentId is provided
+    const queryParentId = parentId || req.user?.id;
+
+    if (req.user?.role !== UserRole.ADMIN && req.user?.id !== queryParentId) {
       return res.status(403).json({ message: "You can only view your own students" });
     }
 
     const students = await User.find({
-      parentId: parentId,
+      parentId: queryParentId,
       role: UserRole.STUDENT
     }).select('-password');
 

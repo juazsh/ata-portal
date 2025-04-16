@@ -1,14 +1,18 @@
 import passport from "passport";
 import { Strategy as LocalStrategy } from "passport-local";
+import { Strategy as JwtStrategy, ExtractJwt } from "passport-jwt";
 import { Express, Request, Response, NextFunction } from "express";
-import session from "express-session";
-import MongoStore from "connect-mongo";
 import bcrypt from "bcrypt";
+import jwt from "jsonwebtoken";
 import { ZodError } from "zod";
 import { fromZodError } from "zod-validation-error";
 import { connectToDatabase, User } from "./lib/mongodb";
 import { loginUserSchema } from "@shared/schema";
 import { UserRole } from "./models/user";
+
+// JWT configuration
+const JWT_SECRET = process.env.JWT_SECRET || "fusionmind-jwt-secret-key";
+const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || "24h";
 
 declare global {
   namespace Express {
@@ -24,60 +28,91 @@ declare global {
   }
 }
 
-// Password hashing
+// >> Password hashing
 async function hashPassword(password: string): Promise<string> {
   const saltRounds = 10;
   return bcrypt.hash(password, saltRounds);
 }
 
-export async function setupAuth(app: Express) {
-  // Define middleware functions early
-  const isAuthenticated = (req: Request, res: Response, next: NextFunction) => {
-    if (req.isAuthenticated()) {
-      return next();
-    }
-    res.status(401).json({ message: "Unauthorized" });
+// >> Generate JWT token
+function generateToken(user: Express.User): string {
+  const payload = {
+    sub: user.id,
+    firstName: user.firstName,
+    lastName: user.lastName,
+    email: user.email,
+    role: user.role,
+    profilePicture: user.profilePicture
   };
 
-  // Role-based authorization middleware
-  const hasRole = (roles: string[]) => {
-    return (req: Request, res: Response, next: NextFunction) => {
-      if (!req.isAuthenticated()) {
+  return jwt.sign(payload, JWT_SECRET, { expiresIn: JWT_EXPIRES_IN });
+}
+
+export async function setupAuth(app: Express) {
+  const isAuthenticated = (req: Request, res: Response, next: NextFunction) => {
+    passport.authenticate('jwt', { session: false }, (err, user, info) => {
+      if (err) {
+        return next(err);
+      }
+
+      if (!user) {
         return res.status(401).json({ message: "Unauthorized" });
       }
 
-      if (!roles.includes(req.user.role)) {
-        return res.status(403).json({ message: "Forbidden: Insufficient privileges" });
-      }
-
+      req.user = user;
       next();
+    })(req, res, next);
+  };
+
+  const hasRole = (roles: string[]) => {
+    return (req: Request, res: Response, next: NextFunction) => {
+      passport.authenticate('jwt', { session: false }, (err, user, info) => {
+        if (err) {
+          return next(err);
+        }
+
+        if (!user) {
+          return res.status(401).json({ message: "Unauthorized" });
+        }
+
+        if (!roles.includes(user.role)) {
+          return res.status(403).json({ message: "Forbidden: Insufficient privileges" });
+        }
+
+        req.user = user;
+        next();
+      })(req, res, next);
     };
   };
 
   await connectToDatabase();
 
-  const sessionSettings: session.SessionOptions = {
-    secret: process.env.SESSION_SECRET || "fusionmind-secret-key",
-    resave: false,
-    saveUninitialized: false,
-    store: MongoStore.create({
-      mongoUrl: process.env.MONGODB_URI || 'mongodb://localhost:27017/fusionmind-portal',
-      collectionName: 'sessions',
-      ttl: 24 * 60 * 60,
-    }),
-    cookie: {
-      httpOnly: true,
-      maxAge: 24 * 60 * 60 * 1000,
-      sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
-      secure: process.env.NODE_ENV === 'production',
-      domain: process.env.NODE_ENV === 'production' ? process.env.COOKIE_DOMAIN : undefined
-    }
+  app.use(passport.initialize());
+
+  const jwtOptions = {
+    jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
+    secretOrKey: JWT_SECRET
   };
 
-  app.use(session(sessionSettings));
-  app.use(passport.initialize());
-  app.use(passport.session());
+  passport.use(
+    new JwtStrategy(jwtOptions, async (payload, done) => {
+      try {
+        const user = {
+          id: payload.sub,
+          firstName: payload.firstName,
+          lastName: payload.lastName,
+          email: payload.email,
+          role: payload.role,
+          active: true,
+          profilePicture: payload.profilePicture
+        };
 
+        return done(null, user);
+      } catch (error) {
+        return done(error, false);
+      }
+    })
+  );
 
   passport.use(
     new LocalStrategy(
@@ -129,38 +164,9 @@ export async function setupAuth(app: Express) {
     )
   );
 
-  passport.serializeUser((user, done) => {
-    done(null, user.id);
-  });
-
-  passport.deserializeUser(async (id: string, done) => {
-    try {
-      const user = await User.findById(id).select('-password');
-      if (!user) {
-        return done(null, false);
-      }
-
-      const userObj = {
-        id: user._id.toString(),
-        firstName: user.firstName,
-        lastName: user.lastName,
-        email: user.email,
-        role: user.role,
-        active: user.active,
-        profilePicture: user.profilePicture || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.firstName + '+' + user.lastName)}&background=3b82f6&color=ffffff`
-      };
-
-      done(null, userObj);
-    } catch (error) {
-      done(error);
-    }
-  });
-
-
   app.post("/api/register", async (req, res) => {
     try {
       const { firstName, lastName, email, password, role } = req.body;
-
 
       if (!firstName || !lastName || !email || !password) {
         return res.status(400).json({ message: "Missing required fields" });
@@ -187,9 +193,7 @@ export async function setupAuth(app: Express) {
 
       const userResponse = newUser.toObject();
       delete userResponse.password;
-
-      // Login the user
-      req.login({
+      const userObj = {
         id: newUser._id.toString(),
         firstName: newUser.firstName,
         lastName: newUser.lastName,
@@ -197,11 +201,13 @@ export async function setupAuth(app: Express) {
         role: newUser.role,
         active: newUser.active,
         profilePicture: newUser.profilePicture
-      }, (err) => {
-        if (err) {
-          return res.status(500).json({ message: "Error logging in after registration" });
-        }
-        return res.status(201).json(userResponse);
+      };
+
+      const token = generateToken(userObj);
+
+      return res.status(201).json({
+        user: userResponse,
+        token
       });
     } catch (error) {
       if (error instanceof ZodError) {
@@ -213,35 +219,26 @@ export async function setupAuth(app: Express) {
     }
   });
 
-
   app.post("/api/login", (req, res, next) => {
     try {
-
       loginUserSchema.parse(req.body);
 
-      const rememberMe = req.body.rememberMe === true;
-
-      if (rememberMe && req.session.cookie) {
-        req.session.cookie.maxAge = 30 * 24 * 60 * 60 * 1000; // 30 days
-      }
-
-      passport.authenticate("local", (err: any, user: Express.User, info: any) => {
+      passport.authenticate("local", { session: false }, (err: any, user: Express.User, info: any) => {
         if (err) {
           return next(err);
         }
+
         if (!user) {
           return res.status(401).json({ message: info.message || "Invalid credentials" });
         }
 
-        req.login(user, (err) => {
-          if (err) {
-            return next(err);
-          }
-          console.log('Login successful, session:', {
-            id: req.sessionID,
-            user: req.user
-          });
-          return res.json({
+        const token = generateToken(user);
+
+        console.log('Login successful, token generated');
+
+        return res.json({
+          token,
+          user: {
             id: user.id,
             firstName: user.firstName,
             lastName: user.lastName,
@@ -249,7 +246,7 @@ export async function setupAuth(app: Express) {
             role: user.role,
             active: user.active,
             profilePicture: user.profilePicture
-          });
+          }
         });
       })(req, res, next);
     } catch (error) {
@@ -261,22 +258,19 @@ export async function setupAuth(app: Express) {
     }
   });
 
+  const tokenBlacklist = new Set<string>();
 
-  app.post("/api/logout", (req, res) => {
-    req.logout((err) => {
-      if (err) {
-        return res.status(500).json({ message: "Error during logout" });
-      }
-      res.status(200).json({ message: "Logged out successfully" });
-    });
-  });
-
-  // Get current user
-  app.get("/api/user", (req, res) => {
-    if (!req.isAuthenticated()) {
-      return res.status(401).json({ message: "Unauthorized" });
+  app.post("/api/logout", isAuthenticated, (req, res) => {
+    const authHeader = req.headers.authorization;
+    if (authHeader && authHeader.startsWith('Bearer ')) {
+      const token = authHeader.substring(7);
+      tokenBlacklist.add(token);
     }
 
+    res.status(200).json({ message: "Logged out successfully" });
+  });
+
+  app.get("/api/user", isAuthenticated, (req, res) => {
     res.json(req.user);
   });
 

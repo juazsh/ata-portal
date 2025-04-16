@@ -1,4 +1,3 @@
-// handlers/payment.ts
 import { Request, Response } from 'express';
 import Stripe from 'stripe';
 import Payment from '../models/payment';
@@ -15,6 +14,16 @@ export const addPayment = async (req: Request, res: Response) => {
 
     if (!paymentMethodId || !userId) {
       return res.status(400).json({ message: 'Missing required fields' });
+    }
+
+    if (!req.user) {
+      return res.status(401).json({ message: 'Authentication required' });
+    }
+
+    if (req.user.id !== userId &&
+      req.user.role !== UserRole.ADMIN &&
+      req.user.role !== UserRole.OWNER) {
+      return res.status(403).json({ message: 'Not authorized to add payment methods for this user' });
     }
 
     const user = await User.findById(userId);
@@ -44,7 +53,6 @@ export const addPayment = async (req: Request, res: Response) => {
 
       await User.findByIdAndUpdate(userId, { stripeCustomerId });
     } else {
-      // Attach payment method to existing customer
       await stripe.paymentMethods.attach(paymentMethodId, {
         customer: stripeCustomerId,
       });
@@ -84,14 +92,20 @@ export const removePayment = async (req: Request, res: Response) => {
   try {
     const { paymentId } = req.params;
 
+    if (!req.user) {
+      return res.status(401).json({ message: 'Authentication required' });
+    }
+
     const payment = await Payment.findById(paymentId);
+
     if (!payment) {
       return res.status(404).json({ message: 'Payment method not found' });
     }
 
-    if (req.user && req.user._id.toString() !== payment.userId.toString() &&
-      req.user.role !== 'admin' && req.user.role !== 'owner') {
-      return res.status(403).json({ message: 'Unauthorized to remove this payment method' });
+    if (req.user.id !== payment.userId.toString() &&
+      req.user.role !== UserRole.ADMIN &&
+      req.user.role !== UserRole.OWNER) {
+      return res.status(403).json({ message: 'Not authorized to remove this payment method' });
     }
 
     const user = await User.findById(payment.userId);
@@ -112,7 +126,6 @@ export const removePayment = async (req: Request, res: Response) => {
       }
     }
 
-    // Remove the payment method from our database
     await Payment.findByIdAndDelete(paymentId);
 
     res.json({ message: 'Payment method removed successfully' });
@@ -126,9 +139,14 @@ export const getPaymentMethods = async (req: Request, res: Response) => {
   try {
     const { userId } = req.params;
 
-    if (req.user && req.user._id.toString() !== userId &&
-      req.user.role !== 'admin' && req.user.role !== 'owner') {
-      return res.status(403).json({ message: 'Unauthorized to view payment methods' });
+    if (!req.user) {
+      return res.status(401).json({ message: 'Authentication required' });
+    }
+
+    if (req.user.id !== userId &&
+      req.user.role !== UserRole.ADMIN &&
+      req.user.role !== UserRole.OWNER) {
+      return res.status(403).json({ message: 'Not authorized to view payment methods for this user' });
     }
 
     const payments = await Payment.find({ userId }).sort({ isDefault: -1, createdAt: -1 });

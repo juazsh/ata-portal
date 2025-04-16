@@ -1,4 +1,3 @@
-// components/dashboard/payment-methods.tsx
 import { useState, useEffect } from "react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
@@ -32,7 +31,23 @@ export function PaymentMethods() {
 
     try {
       setIsLoading(true);
-      const response = await fetch(`/api/payments/${user.id}`);
+      const token = localStorage.getItem('auth_token');
+
+      if (!token) {
+        toast({
+          title: "Authentication Error",
+          description: "You are not logged in. Please log in to view payment methods.",
+          variant: "destructive"
+        });
+        setIsLoading(false);
+        return;
+      }
+
+      const response = await fetch(`/api/payments/${user.id}`, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
 
       if (!response.ok) {
         throw new Error('Failed to fetch payment methods');
@@ -60,8 +75,23 @@ export function PaymentMethods() {
     if (!confirmRemove.id) return;
 
     try {
+
+      const token = localStorage.getItem('auth_token');
+
+      if (!token) {
+        toast({
+          title: "Authentication Error",
+          description: "You are not logged in. Please log in to remove payment methods.",
+          variant: "destructive"
+        });
+        return;
+      }
+
       const response = await fetch(`/api/payments/${confirmRemove.id}`, {
         method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
       });
 
       if (!response.ok) {

@@ -273,13 +273,16 @@ export function PaymentMethodModal({ open, onOpenChange, onSuccess }: PaymentMet
       }
       console.log("HandleSubmit: Payment method created:", paymentMethod.id);
 
-      // Send to server
+      const token = localStorage.getItem('auth_token');
+      if (!token) {
+        throw new Error("Authentication token not found. Please log in again.");
+      }
       console.log("HandleSubmit: Sending to /api/payments...");
       const response = await fetch('/api/payments', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${localStorage.getItem('token')}`
+          'Authorization': `Bearer ${token}`
         },
         body: JSON.stringify({
           paymentMethodId: paymentMethod.id,
@@ -340,7 +343,7 @@ export function PaymentMethodModal({ open, onOpenChange, onSuccess }: PaymentMet
                 <div
                   id="card-element-container"
                   ref={cardElementContainerRef}
-                  className="rounded-md border border-input bg-transparent min-h-[40px]" // Ensure it has some height
+                  className="rounded-md border border-input bg-transparent min-h-[40px]"
                 />
                 {cardError && (<p className="text-sm text-red-600 mt-1">{cardError}</p>)}
               </div>
