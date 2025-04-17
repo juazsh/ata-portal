@@ -1,9 +1,5 @@
 import mongoose, { Schema, Document, Types } from "mongoose";
 
-export enum OfferingType {
-  Camp = "Camp",
-  Regular = "Regular"
-}
 
 export interface ITopic extends Document {
   name: string;
@@ -66,20 +62,16 @@ const ProgramSchema = new Schema<IProgram>(
 
 export interface IOffering extends Document {
   name: string;
-  type: OfferingType;
   description: string;
   estimatedDuration: number;
-  price: number;
   programs: Types.ObjectId[];
 }
 
 const OfferingSchema = new Schema<IOffering>(
   {
     name: { type: String, unique: true, required: true },
-    type: { type: String, enum: Object.values(OfferingType), required: true },
     description: { type: String, required: true },
     estimatedDuration: { type: Number, required: true },
-    price: { type: Number, required: true },
     programs: [{ type: Schema.Types.ObjectId, ref: "Program" }],
   },
   { timestamps: true }

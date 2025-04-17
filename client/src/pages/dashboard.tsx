@@ -7,6 +7,7 @@ import { RecentActivities } from "@/components/dashboard/recent-activities";
 import { Announcements } from "@/components/dashboard/announcements";
 import { Calendar } from "@/components/dashboard/calendar";
 import StudentMenu from "@/components/dashboard/student-menu";
+import ProgramsPage from "@/components/dashboard/program-menu";
 import { useAuth } from "@/hooks/use-auth";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
@@ -548,38 +549,6 @@ function TransactionHistoryPage() {
     </div>
   );
 }
-
-function ProgramsPage() {
-  return (
-    <div className="px-4 py-6 sm:px-6 lg:px-8">
-      <PageHeader
-        title="Programs"
-        description="Available Programs on FusionMind"
-      >
-        {/* <Button variant="outline" className="flex items-center gap-2">
-          <HistoryIcon className="h-4 w-4" />
-          Export History
-        </Button> */}
-      </PageHeader>
-
-      <Card className="mt-6">
-        <CardHeader>
-          <CardTitle>Our Amazing Offerings</CardTitle>
-          <CardDescription>
-            See our available programs and courses
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="p-4 bg-slate-100 dark:bg-slate-800 rounded-lg text-center">
-            <BookIcon className="h-12 w-12 mx-auto text-primary mb-2" />
-            <p>Programs will appear here</p>
-          </div>
-        </CardContent>
-      </Card>
-    </div>
-  );
-}
-
 
 function AccountInfoPage() {
   const { user } = useAuth();
