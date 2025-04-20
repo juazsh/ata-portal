@@ -27,7 +27,8 @@ import {
   Tooltip,
   ResponsiveContainer,
   LineChart,
-  Line
+  Line,
+  Legend
 } from "recharts";
 import {
   GraduationCapIcon,
@@ -39,7 +40,10 @@ import {
   BookIcon,
   PlusCircleIcon,
   AlertCircleIcon,
-  LoaderIcon
+  LoaderIcon,
+  BookOpenIcon,
+  LayersIcon,
+  BookmarkIcon
 } from "lucide-react";
 
 interface Achievement {
@@ -55,14 +59,34 @@ interface ClassInfo {
   room: string;
 }
 
-interface ProgressData {
-  month: string;
+interface ModuleProgressData {
+  moduleId: string;
+  moduleName: string;
+  completedTopics: number;
+  totalTopics: number;
+  completionPercentage: number;
+  marks: number;
+}
+
+interface ProgramProgressData {
+  programId: string;
+  programName: string;
+  completedModules: number;
+  totalModules: number;
+  completionPercentage: number;
+}
+
+interface CompletedTopic {
+  topicId: string;
+  topicName: string;
+  completedAt: string;
   score: number;
 }
 
-interface SubjectProgress {
-  subject: string;
-  score: number;
+interface ProgressData {
+  moduleProgress: ModuleProgressData[];
+  programProgress: ProgramProgressData[];
+  completedTopics: CompletedTopic[];
 }
 
 interface Student {
@@ -75,12 +99,9 @@ interface Student {
   achievements?: Achievement[];
   currentClass?: ClassInfo;
   nextClass?: ClassInfo;
-  progressData?: ProgressData[];
-  subjectProgress?: SubjectProgress[];
   dateOfBirth?: string;
   email?: string;
 }
-
 
 function AchievementBadge({ title, icon }: { title: string; icon: string }) {
   return (
@@ -123,62 +144,138 @@ function ClassCard({ classData, isNext = false }) {
   );
 }
 
-function ProgressChart({ data }: { data: ProgressData[] }) {
-  if (!data || data.length === 0) {
+function ProgramEnrollmentCard({ programData }: { programData: ProgramProgressData[] }) {
+  if (!programData || programData.length === 0) {
     return (
-      <div className="h-64 w-full flex items-center justify-center">
-        <div className="text-center text-slate-500">
-          <AlertCircleIcon className="h-10 w-10 mx-auto mb-2" />
-          <p>No progress data available yet</p>
-        </div>
-      </div>
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center">
+            <BookmarkIcon className="h-5 w-5 mr-2 text-primary" />
+            Program Enrollment
+          </CardTitle>
+        </CardHeader>
+        <CardContent>
+          <div className="text-center py-4 text-slate-500">
+            <p>Not enrolled in any program</p>
+          </div>
+        </CardContent>
+      </Card>
     );
   }
 
   return (
-    <div className="h-64 w-full mt-4">
-      <ResponsiveContainer width="100%" height="100%">
-        <LineChart data={data} margin={{ top: 5, right: 20, bottom: 5, left: 0 }}>
-          <CartesianGrid strokeDasharray="3 3" />
-          <XAxis dataKey="month" />
-          <YAxis domain={[0, 100]} />
-          <Tooltip />
-          <Line type="monotone" dataKey="score" stroke="#8884d8" strokeWidth={2} />
-        </LineChart>
-      </ResponsiveContainer>
-    </div>
+    <Card>
+      <CardHeader>
+        <CardTitle className="flex items-center">
+          <BookmarkIcon className="h-5 w-5 mr-2 text-primary" />
+          Program Enrollment
+        </CardTitle>
+      </CardHeader>
+      <CardContent className="space-y-4">
+        {programData.map((program) => (
+          <div key={program.id || program.programId} className="bg-slate-50 dark:bg-slate-900 p-4 rounded-lg">
+            <div className="flex justify-between items-start mb-2">
+              <div>
+                <h3 className="font-medium text-lg">{program.name || program.programName}</h3>
+                <p className="text-sm text-slate-500">
+                  {program.completedModules} of {program.totalModules} modules completed
+                </p>
+              </div>
+              <Badge variant="outline" className="bg-primary-50 text-primary-700">
+                Active
+              </Badge>
+            </div>
+            <div className="mt-3">
+              <Progress value={program.completionPercentage} className="h-2" />
+              <div className="flex justify-between mt-1 text-xs text-slate-500">
+                <span>Progress</span>
+                <span>{program.completionPercentage.toFixed(1)}%</span>
+              </div>
+            </div>
+          </div>
+        ))}
+      </CardContent>
+    </Card>
   );
 }
-
-function SubjectsChart({ data }: { data: SubjectProgress[] }) {
+function ModuleProgressChart({ data }: { data: ModuleProgressData[] }) {
   if (!data || data.length === 0) {
     return (
       <div className="h-64 w-full flex items-center justify-center">
         <div className="text-center text-slate-500">
           <AlertCircleIcon className="h-10 w-10 mx-auto mb-2" />
-          <p>No subject data available yet</p>
+          <p>No module progress data available yet</p>
         </div>
       </div>
     );
   }
 
+  const chartData = data.map((item) => ({
+    name: item.name || item.moduleName || `Module ${(item.id || item.moduleId).substring(0, 4)}...`,
+    completion: item.completionPercentage,
+    score: item.marks
+  }));
+
   return (
     <div className="h-64 w-full mt-4">
       <ResponsiveContainer width="100%" height="100%">
-        <BarChart data={data} margin={{ top: 5, right: 20, bottom: 5, left: 0 }}>
+        <BarChart data={chartData} margin={{ top: 5, right: 20, bottom: 5, left: 0 }}>
           <CartesianGrid strokeDasharray="3 3" />
-          <XAxis dataKey="subject" />
+          <XAxis dataKey="name" />
           <YAxis domain={[0, 100]} />
           <Tooltip />
-          <Bar dataKey="score" fill="#4f46e5" />
+          <Legend />
+          <Bar dataKey="completion" name="Completion %" fill="#4f46e5" />
+          <Bar dataKey="score" name="Score" fill="#10b981" />
         </BarChart>
       </ResponsiveContainer>
     </div>
   );
 }
 
-function StudentDetails({ student }: { student: Student }) {
+function ModulePerformanceChart({ data }: { data: ModuleProgressData[] }) {
+  if (!data || data.length === 0) {
+    return (
+      <div className="h-64 w-full flex items-center justify-center">
+        <div className="text-center text-slate-500">
+          <AlertCircleIcon className="h-10 w-10 mx-auto mb-2" />
+          <p>No module performance data available yet</p>
+        </div>
+      </div>
+    );
+  }
+
+  const chartData = data.map((item) => ({
+    name: item.name || item.moduleName || `Module ${(item.id || item.moduleId).substring(0, 4)}...`,
+    performance: item.marks
+  }));
+
+  return (
+    <div className="h-64 w-full mt-4">
+      <ResponsiveContainer width="100%" height="100%">
+        <LineChart data={chartData} margin={{ top: 5, right: 20, bottom: 5, left: 0 }}>
+          <CartesianGrid strokeDasharray="3 3" />
+          <XAxis dataKey="name" />
+          <YAxis domain={[0, 100]} />
+          <Tooltip />
+          <Legend />
+          <Line type="monotone" dataKey="performance" name="Performance Score" stroke="#8884d8" strokeWidth={2} />
+        </LineChart>
+      </ResponsiveContainer>
+    </div>
+  );
+}
+
+function StudentDetails({ student, progressData }: { student: Student; progressData?: ProgressData }) {
   if (!student) return null;
+
+  const programProgress = progressData?.programs || progressData?.programProgress || [];
+
+  const overallProgress = programProgress && programProgress.length > 0
+    ? programProgress[0].completionPercentage
+    : 0;
+
+  const moduleProgress = progressData?.modules || progressData?.moduleProgress || [];
 
   return (
     <div className="space-y-6">
@@ -199,36 +296,45 @@ function StudentDetails({ student }: { student: Student }) {
           <BarChartIcon className="h-6 w-6 mb-2 text-primary" />
           <h3 className="text-sm font-medium text-slate-500">Overall Progress</h3>
           <div className="w-full mt-2">
-            <Progress value={student.progress || 0} className="h-2" />
-            <p className="text-center mt-1">{student.progress || 0}%</p>
+            <Progress value={overallProgress} className="h-2" />
+            <p className="text-center mt-1">{overallProgress.toFixed(1)}%</p>
           </div>
         </div>
       </div>
 
-      {student.progressData && student.progressData.length > 0 && (
+      {/* Program Enrollment Card - Updated to handle API response */}
+      <ProgramEnrollmentCard programData={programProgress} />
+
+      {moduleProgress && moduleProgress.length > 0 && (
         <Card>
           <CardHeader>
-            <CardTitle className="text-lg">Progress Over Time</CardTitle>
+            <CardTitle className="flex items-center text-lg">
+              <BookOpenIcon className="h-5 w-5 mr-2 text-primary" />
+              Module Progress
+            </CardTitle>
             <CardDescription>
-              Monthly performance tracking and assessment results
+              Student's current completion percentage across all modules
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <ProgressChart data={student.progressData} />
+            <ModuleProgressChart data={moduleProgress} />
           </CardContent>
         </Card>
       )}
 
-      {student.subjectProgress && student.subjectProgress.length > 0 && (
+      {moduleProgress && moduleProgress.length > 0 && (
         <Card>
           <CardHeader>
-            <CardTitle className="text-lg">Subject Performance</CardTitle>
+            <CardTitle className="flex items-center text-lg">
+              <LayersIcon className="h-5 w-5 mr-2 text-primary" />
+              Module Performance
+            </CardTitle>
             <CardDescription>
-              Current scores across all subjects
+              Student's performance scores across different modules
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <SubjectsChart data={student.subjectProgress} />
+            <ModulePerformanceChart data={moduleProgress} />
           </CardContent>
         </Card>
       )}
@@ -596,7 +702,9 @@ export default function StudentMenu() {
   const { user } = useAuth();
   const [selectedStudent, setSelectedStudent] = useState<Student | null>(null);
   const [students, setStudents] = useState<Student[]>([]);
+  const [progressData, setProgressData] = useState<{ [key: string]: ProgressData }>({});
   const [loading, setLoading] = useState(true);
+  const [loadingProgress, setLoadingProgress] = useState(false);
   const [error, setError] = useState(null);
   const [showAddModal, setShowAddModal] = useState(false);
   const { toast } = useToast();
@@ -657,6 +765,55 @@ export default function StudentMenu() {
     }
   }, [user?.id]);
 
+  useEffect(() => {
+    async function fetchStudentProgress(studentId) {
+      if (!studentId) return;
+
+      try {
+        setLoadingProgress(true);
+
+        const token = localStorage.getItem('auth_token');
+        if (!token) {
+          throw new Error('No authentication token found');
+        }
+
+        const response = await fetch(`/api/students/${studentId}/progress`, {
+          headers: {
+            'Authorization': `Bearer ${token}`
+          }
+        });
+
+        if (!response.ok) {
+          const errorData = await response.json().catch(() => null);
+          throw new Error(errorData?.message || `Error fetching progress: ${response.status}`);
+        }
+
+        const data = await response.json();
+
+        console.log(`Progress data for student ${studentId}:`, data);
+
+        setProgressData(prev => ({
+          ...prev,
+          [studentId]: data
+        }));
+      } catch (err) {
+        console.error("Failed to fetch student progress:", err);
+        toast({
+          title: "Warning",
+          description: err.message || "Could not load progress data",
+          variant: "warning"
+        });
+      } finally {
+        setLoadingProgress(false);
+      }
+    }
+
+    const studentId = selectedStudent?.id || selectedStudent?._id;
+    if (studentId) {
+      fetchStudentProgress(studentId);
+    }
+  }, [selectedStudent]);
+
   const handleAddStudent = async (newStudent) => {
     setStudents(prevStudents => [...prevStudents, newStudent]);
 
@@ -712,12 +869,9 @@ export default function StudentMenu() {
               defaultValue={selectedStudent?.id || selectedStudent?._id}
               value={selectedStudent?.id || selectedStudent?._id}
               onValueChange={(value) => {
-                console.log("Tab value changed to:", value);
                 const student = students.find((s) => s.id === value || s._id === value);
                 if (student) {
                   setSelectedStudent(student);
-                } else {
-                  console.error("No student found for the selected tab value:", value);
                 }
               }}
               className="mb-6"
@@ -725,9 +879,6 @@ export default function StudentMenu() {
               <TabsList className="mb-4">
                 {students.map((student) => {
                   const studentId = student.id || student._id;
-                  if (!studentId) {
-                    console.error("Student is missing an ID:", student);
-                  }
                   return (
                     <TabsTrigger key={studentId} value={studentId}>
                       {student.firstName} {student.lastName}
@@ -744,9 +895,18 @@ export default function StudentMenu() {
                 <h2 className="text-2xl font-bold">
                   {selectedStudent.firstName} {selectedStudent.lastName}
                 </h2>
+                {loadingProgress && (
+                  <div className="flex items-center text-slate-500">
+                    <LoaderIcon className="h-4 w-4 mr-2 animate-spin" />
+                    <span>Loading progress...</span>
+                  </div>
+                )}
               </div>
 
-              <StudentDetails student={selectedStudent} />
+              <StudentDetails
+                student={selectedStudent}
+                progressData={progressData[selectedStudent.id || selectedStudent._id]}
+              />
             </>
           )}
         </div>

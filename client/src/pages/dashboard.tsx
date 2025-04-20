@@ -34,13 +34,16 @@ import {
   LogOutIcon,
   PlusIcon,
   MapPinIcon,
-  BarChartIcon
+  BarChartIcon,
+  User
 } from "lucide-react";
 import { PageHeader } from "@/components/ui/page-header";
 import { PaymentMethodModal } from "@/components/dashboard/payment-method-modal";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { useToast } from "@/hooks/use-toast";
 import { is } from "drizzle-orm";
+import { userInfo } from "os";
+import { StudentManagement } from "@/components/dashboard/student-management";
 
 function getAuthHeaders() {
   const token = localStorage.getItem('auth_token');
@@ -121,12 +124,50 @@ function HomePage() {
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
   const [paymentMethods, setPaymentMethods] = useState([]);
+  const [students, setStudents] = useState([]);
   const { toast } = useToast();
   const [confirmRemove, setConfirmRemove] = useState({
     open: false,
     id: null,
   });
+  const isParent = user?.role === 'parent';
+  useEffect(() => {
+    if (isParent) {
+      fetchStudents();
+    } else {
+      setIsLoading(false);
+    }
+  }, [isParent, user?.id]);
+  const fetchStudents = async () => {
+    if (!isParent || !user?.id) return;
 
+    try {
+      const token = localStorage.getItem('auth_token');
+      if (!token) return;
+
+      const response = await fetch(`/api/students?parentId=${user.id}`, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch students');
+      }
+
+      const data = await response.json();
+      setStudents(data);
+    } catch (error) {
+      console.error('Error fetching students:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load student information",
+        variant: "destructive"
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
   const fetchPaymentMethods = async () => {
     if (!user?.id) return;
 
@@ -210,49 +251,106 @@ function HomePage() {
         description={`Welcome back, ${user?.fullName || 'User'}!`}
         badge={user?.role ? { text: user.role.toUpperCase(), variant: "outline" } : undefined}
       >
-        <Button variant="default" className="flex items-center gap-2">
+        {/* <Button variant="default" className="flex items-center gap-2">
           <RefreshIcon className="h-4 w-4" />
           Refresh Data
-        </Button>
+        </Button> */}
       </PageHeader>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
 
         <Card>
           <CardHeader>
-            <CardTitle>Student Information</CardTitle>
-            <CardDescription>View your student details and progress</CardDescription>
+            <CardTitle>{isParent ? "Students Information" : "Student Information"}</CardTitle>
+            <CardDescription>View student details and progress</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="space-y-4">
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <h3 className="text-sm font-medium text-slate-500 dark:text-slate-400">Name</h3>
-                  <p className="text-lg font-semibold">{user?.fullName || "Not available"}</p>
-                </div>
-                <div>
-                  <h3 className="text-sm font-medium text-slate-500 dark:text-slate-400">Level</h3>
-                  <p className="text-lg font-semibold">Intermediate</p>
-                </div>
-                <div>
-                  <h3 className="text-sm font-medium text-slate-500 dark:text-slate-400">Location</h3>
-                  <p className="text-lg font-semibold">Main Campus</p>
-                </div>
-                <div>
-                  <h3 className="text-sm font-medium text-slate-500 dark:text-slate-400">Progress</h3>
-                  <p className="text-lg font-semibold">78%</p>
-                </div>
+            {isLoading ? (
+              <div className="space-y-4">
+                {[1, 2].map((i) => (
+                  <Card key={i} className="shadow-sm">
+                    <CardContent className="p-6">
+                      <div className="space-y-4">
+                        <Skeleton className="h-6 w-32" />
+                        <div className="grid grid-cols-2 gap-x-12 gap-y-4">
+                          <div>
+                            <Skeleton className="h-4 w-24 mb-2" />
+                            <Skeleton className="h-5 w-32" />
+                          </div>
+                          <div>
+                            <Skeleton className="h-4 w-24 mb-2" />
+                            <Skeleton className="h-5 w-32" />
+                          </div>
+                          <div>
+                            <Skeleton className="h-4 w-24 mb-2" />
+                            <Skeleton className="h-5 w-32" />
+                          </div>
+                          <div>
+                            <Skeleton className="h-4 w-24 mb-2" />
+                            <Skeleton className="h-5 w-32" />
+                          </div>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
               </div>
-
-              <Separator />
-
-              <div>
-                <h3 className="text-sm font-medium text-slate-500 dark:text-slate-400 mb-2">Progress Overview</h3>
-                <div className="h-32 bg-slate-50 dark:bg-slate-800 rounded-md p-2">
-                  <SmallProgressChart />
-                </div>
+            ) : students.length > 0 ? (
+              <div className="space-y-4">
+                {students.map((student) => (
+                  <Card key={student._id} className="shadow-sm">
+                    <CardContent className="p-6">
+                      <div className="space-y-4">
+                        <h3 className="text-lg font-semibold text-slate-900 dark:text-white">
+                          {`${student.firstName} ${student.lastName}`}
+                        </h3>
+                        <div className="grid grid-cols-2 gap-x-12 gap-y-4">
+                          <div className="flex items-start gap-3">
+                            <MapPinIcon className="h-5 w-5 text-slate-400 mt-0.5" />
+                            <div>
+                              <p className="text-sm text-slate-500 dark:text-slate-400 mb-1">Location</p>
+                              <p className="font-medium text-slate-900 dark:text-white">{student.location || "Not assigned"}</p>
+                            </div>
+                          </div>
+                          <div className="flex items-start gap-3">
+                            <BookOpenIcon className="h-5 w-5 text-slate-400 mt-0.5" />
+                            <div>
+                              <p className="text-sm text-slate-500 dark:text-slate-400 mb-1">Program</p>
+                              <p className="font-medium text-slate-900 dark:text-white">{student.enrolledProgram || "Not enrolled"}</p>
+                            </div>
+                          </div>
+                          <div className="flex items-start gap-3">
+                            <GraduationCapIcon className="h-5 w-5 text-slate-400 mt-0.5" />
+                            <div>
+                              <p className="text-sm text-slate-500 dark:text-slate-400 mb-1">Level</p>
+                              <p className="font-medium text-slate-900 dark:text-white">{student.level || "Beginner"}</p>
+                            </div>
+                          </div>
+                          <div className="flex items-start gap-3">
+                            <BarChartIcon className="h-5 w-5 text-slate-400 mt-0.5" />
+                            <div>
+                              <p className="text-sm text-slate-500 dark:text-slate-400 mb-1">Overall Progress</p>
+                              <p className="font-medium text-slate-900 dark:text-white">{student.progress || 0}%</p>
+                            </div>
+                          </div>
+                        </div>
+                      </div>
+                    </CardContent>
+                  </Card>
+                ))}
               </div>
-            </div>
+            ) : (
+              <Card className="shadow-sm">
+                <CardContent className="p-6">
+                  <div className="text-center py-8">
+                    <UserIcon className="h-12 w-12 mx-auto text-slate-400 mb-4" />
+                    <p className="text-slate-600 dark:text-slate-400">
+                      {isParent ? "No students added yet" : "No student information available"}
+                    </p>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
           </CardContent>
         </Card>
 
@@ -387,7 +485,8 @@ function HomePage() {
 
 
 function StudentsPage() {
-  return <StudentMenu />;
+  const { user } = useAuth();
+  return user.role === "owner" ? <StudentManagement /> : <StudentMenu />;
 }
 
 

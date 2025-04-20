@@ -1,5 +1,8 @@
 import { Request, Response } from "express";
 import User, { UserRole } from "../models/user";
+import Enrollment from "../models/enrollment";
+import mongoose from 'mongoose';
+import { getStudentProgress } from "./students-progress";
 
 export const addStudent = async (req: Request, res: Response) => {
   try {
@@ -81,20 +84,46 @@ export const addStudent = async (req: Request, res: Response) => {
 export const getStudentsByParent = async (req: Request, res: Response) => {
   try {
     const { parentId } = req.query;
-
-    // Use JWT user id if no parentId is provided
     const queryParentId = parentId || req.user?.id;
 
     if (req.user?.role !== UserRole.ADMIN && req.user?.id !== queryParentId) {
       return res.status(403).json({ message: "You can only view your own students" });
     }
-
     const students = await User.find({
       parentId: queryParentId,
       role: UserRole.STUDENT
     }).select('-password');
+    const studentsWithEnrollmentAndProgress = await Promise.all(
+      students.map(async (student) => {
+        try {
+          const enrollments = await Enrollment.find({ studentId: student._id })
+            .populate('programId', 'name');
+          const progressData = await getStudentProgress(student._id);
+          let overallProgress = 0;
+          if (progressData?.programs?.length > 0) {
+            const totalProgress = progressData.programs.reduce((acc, prog) => acc + prog.completionPercentage, 0);
+            overallProgress = Math.round(totalProgress / progressData.programs.length);
+          }
 
-    res.json(students);
+          return {
+            ...student.toObject(),
+            enrolledProgram: enrollments[0]?.programId?.name || "Not enrolled",
+            enrollments: enrollments,
+            progress: overallProgress
+          };
+        } catch (err) {
+          console.error(`Error fetching details for student ${student._id}:`, err);
+          return {
+            ...student.toObject(),
+            enrolledProgram: "Error loading",
+            enrollments: [],
+            progress: 0
+          };
+        }
+      })
+    );
+
+    res.json(studentsWithEnrollmentAndProgress);
   } catch (error) {
     console.error("Failed to fetch students:", error);
     res.status(500).json({ message: "Failed to fetch students" });
@@ -125,5 +154,44 @@ export const getStudentById = async (req: Request, res: Response) => {
   } catch (error) {
     console.error("Failed to fetch student:", error);
     res.status(500).json({ message: "Failed to fetch student" });
+  }
+};
+export const getAllStudents = async (req: Request, res: Response) => {
+  try {
+    const students = await User.find({
+      role: UserRole.STUDENT
+    }).select('-password');
+    res.status(200).json(students);
+  } catch (error) {
+    console.error("Failed to fetch all students:", error);
+    res.status(500).json({ message: "Failed to fetch all students" });
+  }
+};
+
+export const getStudentsByProgram = async (req: Request, res: Response) => {
+  try {
+    const { programId } = req.params;
+
+    if (!mongoose.Types.ObjectId.isValid(programId)) {
+      return res.status(400).json({ message: "Invalid program ID format" });
+    }
+
+    const enrollments = await Enrollment.find({ programId: programId })
+      .select('studentId');
+
+    if (!enrollments || enrollments.length === 0) {
+      return res.status(200).json([]);
+    }
+
+    const studentIds = [...new Set(enrollments.map(e => e.studentId))];
+    const students = await User.find({
+      _id: { $in: studentIds },
+      role: UserRole.STUDENT
+    }).select('-password');
+
+    res.status(200).json(students);
+  } catch (error) {
+    console.error(`Failed to fetch students for program ${req.params.programId}:`, error);
+    res.status(500).json({ message: "Failed to fetch students by program" });
   }
 };

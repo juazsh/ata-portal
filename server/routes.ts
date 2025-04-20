@@ -5,7 +5,13 @@ import { User } from "./lib/mongodb";
 import { UserRole } from "./models/user";
 import { handleContactUs } from "./handlers/utilities";
 import { addPayment, removePayment, getPaymentMethods } from "./handlers/payment";
-import { addStudent, getStudentById, getStudentsByParent } from "./handlers/students";
+import {
+  addStudent,
+  getStudentById,
+  getStudentsByParent,
+  getAllStudents,
+  getStudentsByProgram
+} from "./handlers/students";
 import {
   addProgram,
   getAllPrograms,
@@ -20,6 +26,36 @@ import {
   updateOffering,
   deleteOffering,
 } from "./handlers/offerings";
+import {
+  createEnrollment,
+  getEnrollmentById,
+  getEnrollments,
+  updateEnrollment,
+  deleteEnrollment,
+  getEnrollmentsByStudent
+} from "./handlers/enrollments";
+import {
+  addModule,
+  getAllModules,
+  getModuleById,
+  getModulesByProgram,
+  updateModule,
+  deleteModule
+} from "./handlers/modules";
+import {
+  addTopic,
+  getAllTopics,
+  getTopicById,
+  getTopicsByModule,
+  updateTopic,
+  deleteTopic
+} from "./handlers/topics";
+
+import {
+  completeStudentTopic,
+  getStudentProgressHandler
+} from "./handlers/students-progress";
+
 
 export async function registerRoutes(app: Express): Promise<Server> {
   const { isAuthenticated, hasRole } = await setupAuth(app);
@@ -34,10 +70,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // >> Student Progress Routes
+  app.post(
+    "/api/students/:studentId/topics/:topicId/complete",
+    isAuthenticated,
+    hasRole([UserRole.ADMIN, UserRole.OWNER, UserRole.TEACHER]),
+    completeStudentTopic
+  );
+
+  app.get(
+    "/api/students/:studentId/progress",
+    isAuthenticated,
+    getStudentProgressHandler
+  );
+
   // >> Student routes
+  app.get(
+    "/api/students/all",
+    isAuthenticated,
+    hasRole([UserRole.ADMIN, UserRole.OWNER]),
+    getAllStudents
+  );
   app.post("/api/students", isAuthenticated, addStudent);
   app.get("/api/students", isAuthenticated, getStudentsByParent);
   app.get("/api/students/:studentId", isAuthenticated, getStudentById);
+  app.get(
+    "/api/programs/:programId/students",
+    isAuthenticated,
+    hasRole([UserRole.ADMIN, UserRole.OWNER]),
+    getStudentsByProgram
+  );
 
   // >> Contact route
   app.post("/api/contact", handleContactUs);
@@ -93,6 +155,91 @@ export async function registerRoutes(app: Express): Promise<Server> {
     isAuthenticated,
     hasRole([UserRole.ADMIN, UserRole.OWNER]),
     deleteOffering
+  );
+  // >> Module Routes
+  app.get("/api/modules", isAuthenticated, getAllModules);
+  app.get("/api/modules/:moduleId", isAuthenticated, getModuleById);
+  app.get("/api/programs/:programId/modules", isAuthenticated, getModulesByProgram);
+  app.post(
+    "/api/modules",
+    isAuthenticated,
+    hasRole([UserRole.ADMIN, UserRole.OWNER]),
+    addModule
+  );
+  app.put(
+    "/api/modules/:moduleId",
+    isAuthenticated,
+    hasRole([UserRole.ADMIN, UserRole.OWNER]),
+    updateModule
+  );
+  app.delete(
+    "/api/modules/:moduleId",
+    isAuthenticated,
+    hasRole([UserRole.ADMIN, UserRole.OWNER]),
+    deleteModule
+  );
+
+  // >> Topic Routes
+  app.get("/api/topics", isAuthenticated, getAllTopics);
+  app.get("/api/topics/:topicId", isAuthenticated, getTopicById);
+  app.get("/api/modules/:moduleId/topics", isAuthenticated, getTopicsByModule);
+  app.post(
+    "/api/topics",
+    isAuthenticated,
+    hasRole([UserRole.ADMIN, UserRole.OWNER]),
+    addTopic
+  );
+  app.put(
+    "/api/topics/:topicId",
+    isAuthenticated,
+    hasRole([UserRole.ADMIN, UserRole.OWNER]),
+    updateTopic
+  );
+  app.delete(
+    "/api/topics/:topicId",
+    isAuthenticated,
+    hasRole([UserRole.ADMIN, UserRole.OWNER]),
+    deleteTopic
+  );
+
+  // >> Enrollment Routes
+  app.post(
+    "/api/enrollments",
+    isAuthenticated,
+    hasRole([UserRole.ADMIN, UserRole.OWNER, UserRole.PARENT]),
+    createEnrollment
+  );
+
+  app.get(
+    "/api/enrollments",
+    isAuthenticated,
+    getEnrollments
+  );
+
+  app.get(
+    "/api/enrollments/:enrollmentId",
+    isAuthenticated,
+    getEnrollmentById
+  );
+
+  app.get(
+    "/api/students/:studentId/enrollments",
+    isAuthenticated,
+    getEnrollmentsByStudent
+  );
+
+  app.put(
+    "/api/enrollments/:enrollmentId",
+    isAuthenticated,
+    hasRole([UserRole.ADMIN, UserRole.OWNER]),
+    updateEnrollment
+  );
+
+  app.delete(
+    "/api/enrollments/:enrollmentId",
+    isAuthenticated,
+    hasRole([UserRole.ADMIN, UserRole.OWNER]),
+    deleteEnrollment
   );
 
   // >> Create HTTP server

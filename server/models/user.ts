@@ -67,7 +67,6 @@ export interface IUser extends Document {
   nextClass?: IClassInfo;
   progressData?: IProgressData[];
   subjectProgress?: ISubjectProgress[];
-
   comparePassword(candidatePassword: string): Promise<boolean>;
 }
 
