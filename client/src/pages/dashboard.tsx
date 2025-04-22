@@ -545,7 +545,7 @@ function PaymentInfoPage() {
                           <div>
                           </div>
                           <div className="text-right">
-                            <span className="text-white font-bold text-xl">VISA</span>
+                            <span className="text-white font-bold text-xl"><i>VISA</i></span>
                           </div>
                         </div>
 
@@ -558,7 +558,7 @@ function PaymentInfoPage() {
                         <div className="flex justify-between items-end">
                           <div>
                             <p className="text-lg font-semibold">
-                              <i>{method.cardholderName || 'Not Provided'}</i>
+                              {method.cardholderName || 'Not Provided'}
                             </p>
                           </div>
                           <div className="text-right">
@@ -647,15 +647,6 @@ function PaymentInfoPage() {
                       <p className="text-sm text-slate-500 dark:text-slate-400">March 15, 2025</p>
                     </div>
                     <p className="font-semibold">$250.00</p>
-                  </div>
-                </div>
-                <div className="p-3 bg-slate-50 dark:bg-slate-800 rounded-md">
-                  <div className="flex justify-between items-center">
-                    <div>
-                      <p className="font-medium">Materials Fee</p>
-                      <p className="text-sm text-slate-500 dark:text-slate-400">February 28, 2025</p>
-                    </div>
-                    <p className="font-semibold">$75.00</p>
                   </div>
                 </div>
               </div>
