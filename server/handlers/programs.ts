@@ -4,7 +4,6 @@ import mongoose from "mongoose";
 
 export const getAllPrograms = async (req: Request, res: Response) => {
   try {
-
     const programs = await Program.find()
       .populate("offering", "name type")
       .populate({
@@ -14,7 +13,8 @@ export const getAllPrograms = async (req: Request, res: Response) => {
           path: "topics",
           select: "name description estimatedDuration",
         },
-      });
+      })
+      .select("name description price googleClassroomLink estimatedDuration offering modules createdAt updatedAt");
 
     res.status(200).json(programs);
   } catch (error) {
@@ -40,7 +40,8 @@ export const getProgramById = async (req: Request, res: Response) => {
           path: "topics",
           select: "name description estimatedDuration",
         },
-      });
+      })
+      .select("name description price googleClassroomLink estimatedDuration offering modules createdAt updatedAt");
 
     if (!program) {
       return res.status(404).json({ message: "Program not found" });
@@ -55,7 +56,7 @@ export const getProgramById = async (req: Request, res: Response) => {
 
 export const addProgram = async (req: Request, res: Response) => {
   try {
-    const { name, description, price, estimatedDuration, offering: offeringId, modules } = req.body;
+    const { name, description, price, googleClassroomLink, estimatedDuration, offering: offeringId, modules } = req.body;
 
     if (!name || !description || price === undefined || estimatedDuration === undefined || !offeringId) {
       return res.status(400).json({ message: "Missing required fields: name, description, price, estimatedDuration, offering" });
@@ -74,6 +75,7 @@ export const addProgram = async (req: Request, res: Response) => {
       name,
       description,
       price,
+      googleClassroomLink,
       estimatedDuration,
       offering: offeringId,
       modules: modules || [],
@@ -101,18 +103,19 @@ export const updateProgram = async (req: Request, res: Response) => {
   try {
     const { programId } = req.params;
     const updateData = req.body;
+    const { name, description, price, googleClassroomLink, estimatedDuration, offering } = updateData;
 
     if (!mongoose.Types.ObjectId.isValid(programId)) {
       return res.status(400).json({ message: "Invalid Program ID format" });
     }
 
-    if (updateData.offering) {
-      if (!mongoose.Types.ObjectId.isValid(updateData.offering)) {
+    if (offering) {
+      if (!mongoose.Types.ObjectId.isValid(offering)) {
         return res.status(400).json({ message: "Invalid Offering ID format in update data" });
       }
-      const offeringExists = await Offering.findById(updateData.offering);
+      const offeringExists = await Offering.findById(offering);
       if (!offeringExists) {
-        return res.status(404).json({ message: `Offering with ID ${updateData.offering} not found.` });
+        return res.status(404).json({ message: `Offering with ID ${offering} not found.` });
       }
     }
 
@@ -128,8 +131,8 @@ export const updateProgram = async (req: Request, res: Response) => {
           path: "topics",
           select: "name description estimatedDuration",
         },
-      });
-
+      })
+      .select("name description price googleClassroomLink estimatedDuration offering modules createdAt updatedAt");
 
     if (!updatedProgram) {
       return res.status(404).json({ message: "Program not found" });

@@ -123,29 +123,12 @@ export function Sidebar({ isOpen, setIsOpen }: SidebarProps) {
           isDivider: true,
         },
         {
-          name: "Payment Info",
-          icon: CreditCardIcon,
-          path: "/payment-info",
-        },
-        {
-          name: "My Account Info",
-          icon: UsersIcon,
-          path: "/account-info",
-        },
-        {
-          name: "Contact Us",
-          icon: PhoneIcon,
-          path: "/contact",
-        },
-        {
           name: "Sign Out",
           icon: XIcon,
           path: "/logout",
         }
       ];
     }
-
-
     if (role === "teacher") {
       return [
         {

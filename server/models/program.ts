@@ -43,6 +43,7 @@ export interface IProgram extends Document {
   name: string;
   description: string;
   price: number;
+  googleClassroomLink?: string;
   estimatedDuration: number;
   offering: Types.ObjectId;
   modules: Types.ObjectId[];
@@ -53,6 +54,7 @@ const ProgramSchema = new Schema<IProgram>(
     name: { type: String, required: true },
     description: { type: String, required: true },
     price: { type: Number, required: true },
+    googleClassroomLink: { type: String },
     estimatedDuration: { type: Number, required: true },
     offering: { type: Schema.Types.ObjectId, ref: "Offering", required: true },
     modules: [{ type: Schema.Types.ObjectId, ref: "Module" }],

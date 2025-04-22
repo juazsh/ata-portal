@@ -142,7 +142,7 @@ export const getPaymentMethods = async (req: Request, res: Response) => {
     if (!req.user) {
       return res.status(401).json({ message: 'Authentication required' });
     }
-
+    console.dir(req.user);
     if (req.user.id !== userId &&
       req.user.role !== UserRole.ADMIN &&
       req.user.role !== UserRole.OWNER) {
@@ -154,6 +154,7 @@ export const getPaymentMethods = async (req: Request, res: Response) => {
     res.json(payments.map(payment => ({
       id: payment._id,
       last4: payment.last4,
+      cardholderName: req.user.firstName + ' ' + req.user.lastName,
       expirationDate: payment.expirationDate,
       cardType: payment.cardType,
       isDefault: payment.isDefault

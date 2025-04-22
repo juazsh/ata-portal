@@ -121,16 +121,11 @@ export default function Dashboard() {
 // >> we need to move this to a separate file as a component
 function HomePage() {
   const { user } = useAuth();
-  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
-  const [paymentMethods, setPaymentMethods] = useState([]);
   const [students, setStudents] = useState([]);
   const { toast } = useToast();
-  const [confirmRemove, setConfirmRemove] = useState({
-    open: false,
-    id: null,
-  });
   const isParent = user?.role === 'parent';
+
   useEffect(() => {
     if (isParent) {
       fetchStudents();
@@ -138,6 +133,7 @@ function HomePage() {
       setIsLoading(false);
     }
   }, [isParent, user?.id]);
+
   const fetchStudents = async () => {
     if (!isParent || !user?.id) return;
 
@@ -168,81 +164,6 @@ function HomePage() {
       setIsLoading(false);
     }
   };
-  const fetchPaymentMethods = async () => {
-    if (!user?.id) return;
-
-    try {
-      setIsLoading(true);
-      const token = localStorage.getItem('auth_token');
-
-      if (!token) {
-        throw new Error('Authentication required');
-      }
-
-      const response = await fetch(`/api/payments/${user.id}`, {
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
-
-      if (!response.ok) {
-        throw new Error('Failed to fetch payment methods');
-      }
-
-      const data = await response.json();
-      setPaymentMethods(data);
-    } catch (error) {
-      console.error('Error fetching payment methods:', error);
-      toast({
-        title: "Error",
-        description: "Failed to load payment methods",
-        variant: "destructive"
-      });
-    } finally {
-      setIsLoading(false);
-    }
-  };
-
-  const handleRemovePaymentMethod = async () => {
-    if (!confirmRemove.id) return;
-
-    try {
-      const token = localStorage.getItem('auth_token');
-
-      if (!token) {
-        throw new Error('Authentication required');
-      }
-
-      const response = await fetch(`/api/payments/${confirmRemove.id}`, {
-        method: 'DELETE',
-        headers: {
-          'Authorization': `Bearer ${token}`
-        }
-      });
-
-      if (!response.ok) {
-        const data = await response.json();
-        throw new Error(data.message || 'Failed to remove payment method');
-      }
-
-      setPaymentMethods(prevMethods =>
-        prevMethods.filter(method => method.id !== confirmRemove.id)
-      );
-
-      toast({
-        title: "Success",
-        description: "Payment method removed successfully",
-      });
-    } catch (error) {
-      toast({
-        title: "Error",
-        description: error.message || 'Failed to remove payment method',
-        variant: "destructive"
-      });
-    } finally {
-      setConfirmRemove({ open: false, id: null });
-    }
-  };
 
   return (
     <div className="px-4 py-6 sm:px-6 lg:px-8">
@@ -258,7 +179,6 @@ function HomePage() {
       </PageHeader>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
-
         <Card>
           <CardHeader>
             <CardTitle>{isParent ? "Students Information" : "Student Information"}</CardTitle>
@@ -354,7 +274,6 @@ function HomePage() {
           </CardContent>
         </Card>
 
-
         <div className="space-y-6">
           <Card>
             <CardHeader>
@@ -388,101 +307,11 @@ function HomePage() {
               </div>
             </CardContent>
           </Card>
-
-          <Card>
-            <CardHeader className="flex flex-row items-center justify-between">
-              <div>
-                <CardTitle>Payment Method</CardTitle>
-                <CardDescription>Manage your payment information</CardDescription>
-              </div>
-              <Button
-                variant="outline"
-                size="sm"
-                className="flex items-center gap-2"
-                onClick={() => setIsAddModalOpen(true)}
-              >
-                <PlusIcon className="h-4 w-4" />
-                Add
-              </Button>
-            </CardHeader>
-            <CardContent>
-              {isLoading ? (
-                <div className="space-y-3">
-                  <div className="p-4 bg-slate-100 dark:bg-slate-800 rounded-md animate-pulse h-16"></div>
-                </div>
-              ) : paymentMethods.length > 0 ? (
-                <div className="space-y-3">
-                  {paymentMethods.map((method) => (
-                    <div
-                      key={method.id}
-                      className="p-4 bg-slate-50 dark:bg-slate-800 rounded-md flex justify-between items-center"
-                    >
-                      <div className="flex items-center gap-3">
-                        <CreditCardIcon className="h-8 w-8 text-primary" />
-                        <div>
-                          <p className="font-medium capitalize">
-                            {method.cardType} •••• {method.last4}
-                            {method.isDefault && (
-                              <span className="ml-2 text-xs bg-primary/10 text-primary py-0.5 px-2 rounded-full">
-                                Default
-                              </span>
-                            )}
-                          </p>
-                          <p className="text-sm text-slate-500 dark:text-slate-400">
-                            Expires {method.expirationDate}
-                          </p>
-                        </div>
-                      </div>
-                      <Button
-                        variant="ghost"
-                        size="icon"
-                        onClick={() => setConfirmRemove({ open: true, id: method.id })}
-                        aria-label="Remove payment method"
-                      >
-                        <TrashIcon className="h-4 w-4 text-destructive" />
-                      </Button>
-                    </div>
-                  ))}
-                </div>
-              ) : (
-                <div className="p-6 bg-slate-50 dark:bg-slate-800 rounded-md text-center">
-                  <CreditCardIcon className="h-12 w-12 mx-auto text-primary mb-2 opacity-50" />
-                  <p className="text-slate-600 dark:text-slate-400 mb-4">
-                    You don't have any payment methods yet
-                  </p>
-                  <Button
-                    variant="outline"
-                    className="flex items-center justify-center gap-2"
-                    onClick={() => setIsAddModalOpen(true)}
-                  >
-                    <PlusIcon className="h-4 w-4" />
-                    Add Payment Method
-                  </Button>
-                </div>
-              )}
-            </CardContent>
-          </Card>
         </div>
       </div>
-
-      <PaymentMethodModal
-        open={isAddModalOpen}
-        onOpenChange={setIsAddModalOpen}
-        onSuccess={fetchPaymentMethods}
-      />
-
-      <ConfirmDialog
-        open={confirmRemove.open}
-        onOpenChange={(open) => setConfirmRemove({ ...confirmRemove, open })}
-        title="Remove Payment Method"
-        description="Are you sure you want to remove this payment method? This action cannot be undone."
-        confirmText="Remove"
-        onConfirm={handleRemovePaymentMethod}
-      />
     </div>
   );
 }
-
 
 function StudentsPage() {
   const { user } = useAuth();
@@ -587,32 +416,273 @@ function SmallProgressChart() {
 }
 
 function PaymentInfoPage() {
+  const { user } = useAuth();
+  const [isAddModalOpen, setIsAddModalOpen] = useState(false);
+  const [isLoading, setIsLoading] = useState(true);
+  const [paymentMethods, setPaymentMethods] = useState([]);
+  const { toast } = useToast();
+  const [confirmRemove, setConfirmRemove] = useState({
+    open: false,
+    id: null,
+  });
+
+  useEffect(() => {
+    if (user?.id) {
+      fetchPaymentMethods();
+    } else {
+      setIsLoading(false);
+    }
+  }, [user?.id]);
+
+  const fetchPaymentMethods = async () => {
+    if (!user?.id) return;
+
+    try {
+      setIsLoading(true);
+      const token = localStorage.getItem('auth_token');
+
+      if (!token) {
+        throw new Error('Authentication required');
+      }
+
+      const response = await fetch(`/api/payments/${user.id}`, {
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to fetch payment methods');
+      }
+
+      const data = await response.json();
+      setPaymentMethods(data);
+    } catch (error) {
+      console.error('Error fetching payment methods:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load payment methods",
+        variant: "destructive"
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleRemovePaymentMethod = async () => {
+    if (!confirmRemove.id) return;
+
+    try {
+      const token = localStorage.getItem('auth_token');
+
+      if (!token) {
+        throw new Error('Authentication required');
+      }
+
+      const response = await fetch(`/api/payments/${confirmRemove.id}`, {
+        method: 'DELETE',
+        headers: {
+          'Authorization': `Bearer ${token}`
+        }
+      });
+
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.message || 'Failed to remove payment method');
+      }
+
+      setPaymentMethods(prevMethods =>
+        prevMethods.filter(method => method.id !== confirmRemove.id)
+      );
+
+      toast({
+        title: "Success",
+        description: "Payment method removed successfully",
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: error.message || 'Failed to remove payment method',
+        variant: "destructive"
+      });
+    } finally {
+      setConfirmRemove({ open: false, id: null });
+    }
+  };
+
   return (
     <div className="px-4 py-6 sm:px-6 lg:px-8">
       <PageHeader
         title="Payment Information"
         description="Manage your payment methods and billing preferences"
       >
-        <Button variant="outline" className="flex items-center gap-2">
+        <Button variant="outline" className="flex items-center gap-2" onClick={() => setIsAddModalOpen(true)}>
           <CreditCardIcon className="h-4 w-4" />
           Add Payment Method
         </Button>
       </PageHeader>
 
-      <Card className="mt-6">
-        <CardHeader>
-          <CardTitle>Payment Methods</CardTitle>
-          <CardDescription>
-            Your saved payment methods for tuition and fees
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="p-4 bg-slate-100 dark:bg-slate-800 rounded-lg text-center">
-            <CreditCardIcon className="h-12 w-12 mx-auto text-primary mb-2" />
-            <p>Payment methods will appear here</p>
-          </div>
-        </CardContent>
-      </Card>
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
+        <Card>
+          <CardHeader>
+            <CardTitle>Payment Methods</CardTitle>
+            <CardDescription>
+              Your saved payment methods for tuition and fees
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            {isLoading ? (
+              <div className="space-y-3">
+                <div className="p-4 bg-slate-100 dark:bg-slate-800 rounded-md animate-pulse h-56"></div>
+              </div>
+            ) : paymentMethods.length > 0 ? (
+              <div className="space-y-6">
+                {paymentMethods.map((method) => (
+                  <div key={method.id} className="relative">
+                    <div className="rounded-lg overflow-hidden shadow-lg h-48 bg-slate-900 bg-opacity-90 text-white relative">
+                      <div className="p-6 flex flex-col h-full justify-between">
+                        <div className="flex justify-between items-start">
+                          <div>
+                          </div>
+                          <div className="text-right">
+                            <span className="text-white font-bold text-xl">VISA</span>
+                          </div>
+                        </div>
+
+                        <div className="mt-4">
+                          <p className="text-lg font-medium tracking-widest">
+                            **** **** **** {method.last4 || '9875'}
+                          </p>
+                        </div>
+
+                        <div className="flex justify-between items-end">
+                          <div>
+                            <p className="text-lg font-semibold">
+                              <i>{method.cardholderName || 'Not Provided'}</i>
+                            </p>
+                          </div>
+                          <div className="text-right">
+                            <p className="text-sm text-slate-300">Exp Date</p>
+                            <p className="text-lg font-semibold">
+                              {method.expirationDate || '12/24'}
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+
+                    <div className="mt-3 flex justify-between items-center">
+                      <div>
+                        <p className="font-medium capitalize">
+                          {method.cardType} •••• {method.last4}
+                          {method.isDefault && (
+                            <span className="ml-2 text-xs bg-primary/10 text-primary py-0.5 px-2 rounded-full">
+                              Default
+                            </span>
+                          )}
+                        </p>
+                        <p className="text-sm text-slate-500 dark:text-slate-400">
+                          Expires {method.expirationDate}
+                        </p>
+                      </div>
+                      <Button
+                        variant="ghost"
+                        size="icon"
+                        onClick={() => setConfirmRemove({ open: true, id: method.id })}
+                        aria-label="Remove payment method"
+                      >
+                        <TrashIcon className="h-4 w-4 text-destructive" />
+                      </Button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            ) : (
+              <div className="p-6 bg-slate-50 dark:bg-slate-800 rounded-md text-center">
+                <CreditCardIcon className="h-12 w-12 mx-auto text-primary mb-2 opacity-50" />
+                <p className="text-slate-600 dark:text-slate-400 mb-4">
+                  You don't have any payment methods yet
+                </p>
+                <Button
+                  variant="outline"
+                  className="flex items-center justify-center gap-2"
+                  onClick={() => setIsAddModalOpen(true)}
+                >
+                  <PlusIcon className="h-4 w-4" />
+                  Add Payment Method
+                </Button>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+
+        <Card>
+          <CardHeader>
+            <CardTitle>Payment Overview</CardTitle>
+            <CardDescription>
+              Summary of your payment status and recent transactions
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="grid grid-cols-2 gap-4 mb-4">
+              <div className="p-4 bg-slate-50 dark:bg-slate-800 rounded-md">
+                <h3 className="text-sm font-medium text-slate-500 dark:text-slate-400">Outstanding</h3>
+                <p className="text-xl font-semibold mb-2">$350.00</p>
+                <Button size="sm" className="w-full">Make Payment</Button>
+              </div>
+              <div className="p-4 bg-slate-50 dark:bg-slate-800 rounded-md">
+                <h3 className="text-sm font-medium text-slate-500 dark:text-slate-400">Credit</h3>
+                <p className="text-xl font-semibold mb-2">$50.00</p>
+                <Button size="sm" variant="outline" className="w-full">Add Credit</Button>
+              </div>
+            </div>
+
+            <div className="mb-4">
+              <h3 className="text-sm font-medium text-slate-500 dark:text-slate-400 mb-2">Recent Transactions</h3>
+              <div className="space-y-3">
+                <div className="p-3 bg-slate-50 dark:bg-slate-800 rounded-md">
+                  <div className="flex justify-between items-center">
+                    <div>
+                      <p className="font-medium">Tuition Fee</p>
+                      <p className="text-sm text-slate-500 dark:text-slate-400">March 15, 2025</p>
+                    </div>
+                    <p className="font-semibold">$250.00</p>
+                  </div>
+                </div>
+                <div className="p-3 bg-slate-50 dark:bg-slate-800 rounded-md">
+                  <div className="flex justify-between items-center">
+                    <div>
+                      <p className="font-medium">Materials Fee</p>
+                      <p className="text-sm text-slate-500 dark:text-slate-400">February 28, 2025</p>
+                    </div>
+                    <p className="font-semibold">$75.00</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <Button variant="outline" className="w-full flex items-center justify-center gap-2">
+              <HistoryIcon className="h-4 w-4" />
+              View All Transactions
+            </Button>
+          </CardContent>
+        </Card>
+      </div>
+
+      <PaymentMethodModal
+        open={isAddModalOpen}
+        onOpenChange={setIsAddModalOpen}
+        onSuccess={fetchPaymentMethods}
+      />
+
+      <ConfirmDialog
+        open={confirmRemove.open}
+        onOpenChange={(open) => setConfirmRemove({ ...confirmRemove, open })}
+        title="Remove Payment Method"
+        description="Are you sure you want to remove this payment method? This action cannot be undone."
+        confirmText="Remove"
+        onConfirm={handleRemovePaymentMethod}
+      />
     </div>
   );
 }
