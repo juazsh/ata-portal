@@ -5,25 +5,49 @@ import { Program } from '../models/program';
 import { ProgramProgress, ModuleProgress } from '../models/student-progress';
 import { Module } from '../models/program';
 import mongoose from 'mongoose';
+import { processStripePayment } from './helpers/process-stripe-payments';
+import { processPayPalPayment } from './helpers/process-paypal-payment';
 
 export const createEnrollment = async (req: Request, res: Response) => {
   const session = await mongoose.startSession();
   session.startTransaction();
 
   try {
-    const { programId, studentId, parentId, paymentMethod, paymentPlan, installments } = req.body;
+    const {
+      programId,
+      studentId,
+      parentId,
+      paymentMethod,
+      offeringType
+    } = req.body;
+
     const currentUser = req.user as any;
-    if (!programId || !studentId || !paymentMethod || !paymentPlan) {
+
+    if (!programId || !studentId || !paymentMethod || !offeringType) {
       return res.status(400).json({
         success: false,
         message: 'Missing required fields'
       });
     }
 
-    if (paymentPlan === 'monthly' && !installments) {
+    if (!['Marathon', 'Sprint'].includes(offeringType)) {
       return res.status(400).json({
         success: false,
-        message: 'Installments required for monthly payment plan'
+        message: 'Invalid offering type. Must be Marathon or Sprint'
+      });
+    }
+
+    if (offeringType === 'Marathon' && (!req.body.monthlyAmount || !req.body.subscriptionId)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Marathon enrollment requires monthlyAmount and subscriptionId'
+      });
+    }
+
+    if (offeringType === 'Sprint' && (!req.body.paymentDate || !req.body.paymentTransactionId)) {
+      return res.status(400).json({
+        success: false,
+        message: 'Sprint enrollment requires paymentDate and paymentTransactionId'
       });
     }
 
@@ -42,8 +66,7 @@ export const createEnrollment = async (req: Request, res: Response) => {
         _id: studentId,
         parentId: currentUser.id
       });
-      console.log('Student:', studentId);
-      console.log('Parent:', currentUser.id, parentId);
+
       if (!student) {
         return res.status(403).json({
           success: false,
@@ -89,11 +112,7 @@ export const createEnrollment = async (req: Request, res: Response) => {
     const taxAmount = (programFee + adminFee) * taxRate;
     const totalAmount = programFee + adminFee + taxAmount;
 
-    const installmentAmount = paymentPlan === 'monthly'
-      ? totalAmount / installments
-      : totalAmount;
-
-    const enrollment = new Enrollment({
+    const enrollmentData: any = {
       programId,
       studentId,
       parentId: finalParentId,
@@ -101,15 +120,22 @@ export const createEnrollment = async (req: Request, res: Response) => {
       adminFee,
       taxAmount,
       totalAmount,
+      offeringType,
       paymentMethod,
-      paymentPlan,
-      installments: paymentPlan === 'monthly' ? installments : 1,
-      installmentAmount,
-      installmentsPaid: 0,
-      paymentStatus: 'pending',
-      nextPaymentDue: new Date()
-    });
+      paymentStatus: 'pending'
+    };
 
+    if (offeringType === 'Marathon') {
+      enrollmentData.monthlyAmount = req.body.monthlyAmount;
+      enrollmentData.subscriptionId = req.body.subscriptionId;
+      enrollmentData.nextPaymentDue = req.body.nextPaymentDue || new Date();
+      enrollmentData.paymentHistory = req.body.paymentHistory || [];
+    } else {
+      enrollmentData.paymentDate = req.body.paymentDate;
+      enrollmentData.paymentTransactionId = req.body.paymentTransactionId;
+    }
+
+    const enrollment = new Enrollment(enrollmentData);
     await enrollment.save({ session });
 
     const programProgress = new ProgramProgress({
@@ -165,8 +191,6 @@ export const getEnrollmentById = async (req: Request, res: Response) => {
   try {
     const { enrollmentId } = req.params;
     const currentUser = req.user as any;
-
-    console.log("Current User:", currentUser);
 
     const enrollment = await Enrollment.findById(enrollmentId)
       .populate('programId', 'name description price')
@@ -255,12 +279,23 @@ export const updateEnrollment = async (req: Request, res: Response) => {
       });
     }
 
-    if (updateData.paymentPlan && updateData.paymentPlan !== enrollment.paymentPlan) {
-      if (updateData.paymentPlan === 'monthly' && updateData.installments) {
-        updateData.installmentAmount = enrollment.totalAmount / updateData.installments;
-      } else if (updateData.paymentPlan === 'one-time') {
-        updateData.installmentAmount = enrollment.totalAmount;
-        updateData.installments = 1;
+    if (updateData.paymentHistory && enrollment.offeringType === 'Marathon') {
+      updateData.paymentHistory = [...(enrollment.paymentHistory || []), ...updateData.paymentHistory];
+    }
+
+    if (updateData.offeringType && updateData.offeringType !== enrollment.offeringType) {
+      if (updateData.offeringType === 'Sprint' && (!updateData.paymentDate || !updateData.paymentTransactionId)) {
+        return res.status(400).json({
+          success: false,
+          message: 'Sprint enrollment requires paymentDate and paymentTransactionId'
+        });
+      }
+
+      if (updateData.offeringType === 'Marathon' && (!updateData.monthlyAmount || !updateData.subscriptionId)) {
+        return res.status(400).json({
+          success: false,
+          message: 'Marathon enrollment requires monthlyAmount and subscriptionId'
+        });
       }
     }
 
@@ -371,6 +406,117 @@ export const getEnrollmentsByStudent = async (req: Request, res: Response) => {
     return res.status(500).json({
       success: false,
       message: 'Failed to fetch student enrollments',
+      error: (error as Error).message
+    });
+  }
+};
+
+export const processEnrollmentPayment = async (req: Request, res: Response) => {
+  try {
+    const {
+      enrollmentId,
+      paymentMethodId,
+      paymentProcessor = 'stripe'
+    } = req.body;
+
+    const currentUser = req.user as any;
+
+    if (![UserRole.ADMIN, UserRole.OWNER, UserRole.PARENT].includes(currentUser.role)) {
+      return res.status(403).json({
+        success: false,
+        message: 'Unauthorized to process payments'
+      });
+    }
+
+    const enrollment = await Enrollment.findById(enrollmentId);
+    if (!enrollment) {
+      return res.status(404).json({
+        success: false,
+        message: 'Enrollment not found'
+      });
+    }
+
+    if (
+      currentUser.role === UserRole.PARENT &&
+      enrollment.parentId.toString() !== currentUser.id.toString()
+    ) {
+      return res.status(403).json({
+        success: false,
+        message: 'Unauthorized to process payment for this enrollment'
+      });
+    }
+
+    const user = await User.findById(enrollment.parentId);
+    if (!user) {
+      return res.status(404).json({
+        success: false,
+        message: 'Parent user not found'
+      });
+    }
+
+    if (paymentProcessor === 'stripe') {
+      return await processStripePayment(user, enrollment, paymentMethodId, res);
+    } else if (paymentProcessor === 'paypal') {
+      return await processPayPalPayment(user, enrollment, paymentMethodId, res);
+    } else {
+      return res.status(400).json({
+        success: false,
+        message: 'Invalid payment processor selected'
+      });
+    }
+  } catch (error) {
+    console.error('Error processing payment:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Failed to process payment',
+      error: (error as Error).message
+    });
+  }
+};
+
+export const cancelSubscription = async (req: Request, res: Response) => {
+  try {
+    const { enrollmentId } = req.params;
+    const currentUser = req.user as any;
+
+    if (![UserRole.ADMIN, UserRole.OWNER].includes(currentUser.role)) {
+      return res.status(403).json({
+        success: false,
+        message: 'Unauthorized to cancel subscriptions'
+      });
+    }
+
+    const enrollment = await Enrollment.findById(enrollmentId);
+    if (!enrollment) {
+      return res.status(404).json({
+        success: false,
+        message: 'Enrollment not found'
+      });
+    }
+
+    if (enrollment.offeringType !== 'Marathon') {
+      return res.status(400).json({
+        success: false,
+        message: 'Only Marathon enrollments can be cancelled'
+      });
+    }
+
+    const updatedEnrollment = await Enrollment.findByIdAndUpdate(
+      enrollmentId,
+      { $set: { paymentStatus: 'cancelled' } },
+      { new: true }
+    );
+
+    return res.status(200).json({
+      success: true,
+      message: 'Subscription cancelled successfully',
+      enrollment: updatedEnrollment
+    });
+  } catch (error) {
+    console.error('Error cancelling subscription:', error);
+    return res.status(500).json({
+      success: false,
+      message: 'Failed to cancel subscription',
       error: (error as Error).message
     });
   }

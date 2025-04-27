@@ -5,6 +5,7 @@ import { User } from "./lib/mongodb";
 import { UserRole } from "./models/user";
 import { handleContactUs } from "./handlers/utilities";
 import { addPayment, removePayment, getPaymentMethods } from "./handlers/payment";
+import { handlePayPalSuccess, handlePayPalCancel } from "./handlers/helpers/process-paypal-payment";
 import {
   addStudent,
   getStudentById,
@@ -32,7 +33,9 @@ import {
   getEnrollments,
   updateEnrollment,
   deleteEnrollment,
-  getEnrollmentsByStudent
+  getEnrollmentsByStudent,
+  processEnrollmentPayment,
+  cancelSubscription
 } from "./handlers/enrollments";
 import {
   addModule,
@@ -241,6 +244,26 @@ export async function registerRoutes(app: Express): Promise<Server> {
     hasRole([UserRole.ADMIN, UserRole.OWNER]),
     deleteEnrollment
   );
+
+  // >> Process payment for enrollment
+  app.post(
+    "/api/enrollments/:enrollmentId/process-payment",
+    isAuthenticated,
+    hasRole([UserRole.ADMIN, UserRole.OWNER, UserRole.PARENT]),
+    processEnrollmentPayment
+  );
+
+  // >> Cancel a subscription for Marathon enrollment
+  app.post(
+    "/api/enrollments/:enrollmentId/cancel-subscription",
+    isAuthenticated,
+    hasRole([UserRole.ADMIN, UserRole.OWNER]),
+    cancelSubscription
+  );
+
+  app.get('/enrollments/success', isAuthenticated, handlePayPalSuccess);
+  app.get('/enrollments/cancel', isAuthenticated, handlePayPalCancel);
+
 
   // >> Create HTTP server
   const httpServer = createServer(app);

@@ -7,7 +7,7 @@ import { RecentActivities } from "@/components/dashboard/recent-activities";
 import { Announcements } from "@/components/dashboard/announcements";
 import { Calendar } from "@/components/dashboard/calendar";
 import StudentMenu from "@/components/dashboard/student-menu";
-import ProgramsPage from "@/components/dashboard/program-menu";
+import ProgramsPage from "@/components/dashboard/programs/program-page"
 import { useAuth } from "@/hooks/use-auth";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";

@@ -47,6 +47,8 @@ export interface IProgram extends Document {
   estimatedDuration: number;
   offering: Types.ObjectId;
   modules: Types.ObjectId[];
+  stripeProductId?: string;
+  paypalProductId?: string;
 }
 
 const ProgramSchema = new Schema<IProgram>(
@@ -58,6 +60,8 @@ const ProgramSchema = new Schema<IProgram>(
     estimatedDuration: { type: Number, required: true },
     offering: { type: Schema.Types.ObjectId, ref: "Offering", required: true },
     modules: [{ type: Schema.Types.ObjectId, ref: "Module" }],
+    stripeProductId: { type: String },
+    paypalProductId: { type: String },
   },
   { timestamps: true }
 );
@@ -66,6 +70,7 @@ export interface IOffering extends Document {
   name: string;
   description: string;
   estimatedDuration: number;
+  offeringType: 'Marathon' | 'Sprint';
   programs: Types.ObjectId[];
 }
 
@@ -74,6 +79,11 @@ const OfferingSchema = new Schema<IOffering>(
     name: { type: String, unique: true, required: true },
     description: { type: String, required: true },
     estimatedDuration: { type: Number, required: true },
+    offeringType: {
+      type: String,
+      enum: ['Marathon', 'Sprint'],
+      required: true
+    },
     programs: [{ type: Schema.Types.ObjectId, ref: "Program" }],
   },
   { timestamps: true }
