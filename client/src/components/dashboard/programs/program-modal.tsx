@@ -15,7 +15,7 @@ import { Input } from "@/components/ui/input"
 import { Textarea } from "@/components/ui/textarea"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Loader2Icon } from "lucide-react"
+import { Loader2Icon, LinkIcon } from "lucide-react"
 
 export function ProgramModal({ open, onOpenChange, currentProgram, offerings, onSuccess }) {
   const { toast } = useToast()
@@ -25,6 +25,7 @@ export function ProgramModal({ open, onOpenChange, currentProgram, offerings, on
     price: 0,
     estimatedDuration: 0,
     offering: "",
+    googleClassroomLink: "",
   })
   const [isSubmitting, setIsSubmitting] = useState(false)
 
@@ -36,6 +37,7 @@ export function ProgramModal({ open, onOpenChange, currentProgram, offerings, on
         price: currentProgram.price,
         estimatedDuration: currentProgram.estimatedDuration,
         offering: currentProgram.offering._id,
+        googleClassroomLink: currentProgram.googleClassroomLink || "",
       })
     } else {
       resetForm()
@@ -49,6 +51,7 @@ export function ProgramModal({ open, onOpenChange, currentProgram, offerings, on
       price: 0,
       estimatedDuration: 0,
       offering: "",
+      googleClassroomLink: "",
     })
   }
 
@@ -181,6 +184,23 @@ export function ProgramModal({ open, onOpenChange, currentProgram, offerings, on
                 onChange={handleInputChange}
                 required
                 min="0"
+              />
+            </div>
+          </div>
+
+          <div className="grid w-full items-center gap-2">
+            <Label htmlFor="googleClassroomLink">Google Classroom Link</Label>
+            <div className="flex">
+              <span className="inline-flex items-center px-3 rounded-l-md border border-r-0 border-input bg-muted text-muted-foreground">
+                <LinkIcon className="h-4 w-4" />
+              </span>
+              <Input
+                id="googleClassroomLink"
+                name="googleClassroomLink"
+                value={formData.googleClassroomLink}
+                onChange={handleInputChange}
+                placeholder="https://classroom.google.com/..."
+                className="rounded-l-none"
               />
             </div>
           </div>

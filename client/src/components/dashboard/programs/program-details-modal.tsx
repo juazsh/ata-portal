@@ -5,7 +5,7 @@ import { Button } from "@/components/ui/button"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogFooter } from "@/components/ui/dialog"
 import { Separator } from "@/components/ui/separator"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
-import { PlusIcon, MoreVerticalIcon, PencilIcon, TrashIcon, InfoIcon } from "lucide-react"
+import { PlusIcon, MoreVerticalIcon, PencilIcon, TrashIcon, InfoIcon, ExternalLinkIcon, LinkIcon } from "lucide-react"
 
 export function ProgramDetailsModal({
   open,
@@ -52,6 +52,24 @@ export function ProgramDetailsModal({
               <h4 className="text-sm font-medium text-slate-500 dark:text-slate-400 mb-1">Description</h4>
               <p>{program.description}</p>
             </div>
+
+            {program.googleClassroomLink && (
+              <div className="mt-4">
+                <h4 className="text-sm font-medium text-slate-500 dark:text-slate-400 mb-1">Google Classroom</h4>
+                <div className="flex items-center">
+                  <LinkIcon className="h-4 w-4 text-slate-500 dark:text-slate-400 mr-2" />
+                  <a
+                    href={program.googleClassroomLink}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="text-primary hover:underline flex items-center"
+                  >
+                    {program.googleClassroomLink}
+                    <ExternalLinkIcon className="h-3 w-3 ml-1" />
+                  </a>
+                </div>
+              </div>
+            )}
 
             <div className="mt-6">
               <div className="flex justify-between items-center mb-2">

@@ -1,9 +1,10 @@
 "use client"
 
-import { BookIcon, InfoIcon, MoreVerticalIcon, PencilIcon, PlusIcon, TrashIcon, Loader2Icon } from "lucide-react"
+import { BookIcon, InfoIcon, MoreVerticalIcon, PencilIcon, PlusIcon, TrashIcon, Loader2Icon, LinkIcon } from "lucide-react"
 import { Button } from "@/components/ui/button"
 import { Card, CardHeader, CardTitle, CardDescription, CardContent, CardFooter } from "@/components/ui/card"
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu"
+import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 
 export function ProgramList({
   programs,
@@ -57,7 +58,21 @@ export function ProgramList({
           <CardHeader className="pb-3">
             <div className="flex justify-between items-start">
               <div>
-                <CardTitle>{program.name}</CardTitle>
+                <div className="flex items-center gap-2">
+                  <CardTitle>{program.name}</CardTitle>
+                  {program.googleClassroomLink && (
+                    <TooltipProvider>
+                      <Tooltip>
+                        <TooltipTrigger asChild>
+                          <LinkIcon className="h-4 w-4 text-slate-500" />
+                        </TooltipTrigger>
+                        <TooltipContent>
+                          <p>Google Classroom available</p>
+                        </TooltipContent>
+                      </Tooltip>
+                    </TooltipProvider>
+                  )}
+                </div>
                 <CardDescription>
                   {program.offering?.name} - {program.offering?.type}
                 </CardDescription>
