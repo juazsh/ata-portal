@@ -1,28 +1,23 @@
-import { useState } from "react";
-import { useForm } from "react-hook-form";
-import { zodResolver } from "@hookform/resolvers/zod";
-import { loginUserSchema } from "@shared/schema";
-import { useAuth } from "@/hooks/use-auth";
-import { Button } from "@/components/ui/button";
-import { Input } from "@/components/ui/input";
-import { Checkbox } from "@/components/ui/checkbox";
-import { Label } from "@/components/ui/label";
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage
-} from "@/components/ui/form";
-import { z } from "zod";
-import { Link } from "wouter";
+"use client"
 
-type LoginFormValues = z.infer<typeof loginUserSchema>;
+import { useState } from "react"
+import { useForm } from "react-hook-form"
+import { zodResolver } from "@hookform/resolvers/zod"
+import { loginUserSchema } from "@shared/schema"
+import { useAuth } from "@/hooks/use-auth"
+import { Button } from "@/components/ui/button"
+import { Input } from "@/components/ui/input"
+import { Checkbox } from "@/components/ui/checkbox"
+import { Label } from "@/components/ui/label"
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form"
+import type { z } from "zod"
+import { Link } from "wouter"
+
+type LoginFormValues = z.infer<typeof loginUserSchema>
 
 export function LoginForm() {
-  const { loginMutation } = useAuth();
-  const [rememberMe, setRememberMe] = useState(false);
+  const { loginMutation } = useAuth()
+  const [rememberMe, setRememberMe] = useState(false)
 
   const form = useForm<LoginFormValues>({
     resolver: zodResolver(loginUserSchema),
@@ -30,11 +25,11 @@ export function LoginForm() {
       email: "",
       password: "",
     },
-  });
+  })
 
   const onSubmit = async (data: LoginFormValues) => {
-    loginMutation.mutate({ ...data, rememberMe });
-  };
+    loginMutation.mutate({ ...data, rememberMe })
+  }
 
   return (
     <Form {...form}>
@@ -48,9 +43,10 @@ export function LoginForm() {
               <FormControl>
                 <Input
                   type="email"
-                  placeholder="yar@aleptau@com"
+                  placeholder="your@email.com"
                   {...field}
                   autoComplete="email"
+                  className="bg-slate-50 dark:bg-slate-800"
                 />
               </FormControl>
               <FormMessage />
@@ -70,6 +66,7 @@ export function LoginForm() {
                   placeholder="••••••••"
                   {...field}
                   autoComplete="current-password"
+                  className="bg-slate-50 dark:bg-slate-800"
                 />
               </FormControl>
               <FormMessage />
@@ -84,17 +81,14 @@ export function LoginForm() {
               checked={rememberMe}
               onCheckedChange={(checked) => setRememberMe(checked as boolean)}
             />
-            <Label
-              htmlFor="remember-me"
-              className="text-sm text-slate-700 dark:text-slate-300"
-            >
+            <Label htmlFor="remember-me" className="text-sm text-slate-700 dark:text-slate-300">
               Remember me
             </Label>
           </div>
           <div className="text-sm">
             <Link
               href="/forgot-password"
-              className="font-medium text-primary-600 hover:text-primary-500 dark:text-primary-400 dark:hover:text-primary-300"
+              className="font-medium text-primary hover:text-primary/80 dark:text-primary-400 dark:hover:text-primary-300"
             >
               Forgot your password?
             </Link>
@@ -103,7 +97,7 @@ export function LoginForm() {
 
         <Button
           type="submit"
-          className="w-full"
+          className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
           disabled={loginMutation.isPending}
         >
           {loginMutation.isPending ? "Signing in..." : "Sign in"}
@@ -116,5 +110,5 @@ export function LoginForm() {
         )}
       </form>
     </Form>
-  );
+  )
 }

@@ -19,6 +19,8 @@ import {
   getProgramById,
   updateProgram,
   deleteProgram,
+  getProgramsByOfferingType,
+  getProgramsByOffering,
 } from "./handlers/programs";
 import {
   addOffering,
@@ -135,6 +137,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     hasRole([UserRole.ADMIN, UserRole.OWNER]),
     deleteProgram
   );
+  app.get("/api/programs/public/offering-type/:name", getProgramsByOfferingType);
 
   // >> Offering Routes
   app.get("/api/offerings/public", getAllOfferings);

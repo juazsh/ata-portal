@@ -52,7 +52,7 @@ export function Header({ toggleSidebar }: HeaderProps) {
             className="h-8 w-auto mr-2 object-contain rounded-md drop-shadow-lg"
           />
           <span className="text-xl font-semibold text-slate-800 dark:text-white">
-            FusionMind
+            STEM Masters
           </span>
         </div>
       </div>

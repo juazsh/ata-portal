@@ -2,13 +2,21 @@ import { Switch, Route } from "wouter";
 import { Toaster } from "@/components/ui/toaster";
 import NotFound from "@/pages/not-found";
 import AuthPage from "@/pages/auth-page";
+import EnrollmentPage from "@/pages/enrollment-page";
+import MarathonPage from "./pages/marathon-page";
+import SprintPage from "./pages/sprint-page";
 import Dashboard from "@/pages/dashboard";
 import { ProtectedRoute } from "@/lib/protected-route";
+import FinalizeEnrollment from "./pages/enrollment-finalize";
 
 function Router() {
   return (
     <Switch>
       <Route path="/auth" component={AuthPage} />
+      <Route path="/enroll" component={EnrollmentPage} />
+      <Route path="/marathon" component={MarathonPage} />
+      <Route path="/sprint" component={SprintPage} />
+      <Route path="/finalize/:pid" component={FinalizeEnrollment} />
 
       <ProtectedRoute path="/" component={Dashboard} />
       <ProtectedRoute path="/students" component={Dashboard} />

@@ -8,9 +8,43 @@ const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || '', {
   apiVersion: '2025-03-31.basil',
 });
 
+export const getProgramsByOffering = async (req: Request, res: Response) => {
+  try {
+    const { offeringId } = req.params;
+
+    if (!mongoose.Types.ObjectId.isValid(offeringId)) {
+      return res.status(400).json({
+        message: "Invalid offering ID format"
+      });
+    }
+
+    const programs = await Program.find({ offering: offeringId })
+      .populate("offering", "name description")
+      .populate({
+        path: "modules",
+        select: "name description topics estimatedDuration",
+        populate: {
+          path: "topics",
+          select: "name description estimatedDuration taughtBy",
+        },
+      })
+      .select("name description price googleClassroomLink estimatedDuration offering modules createdAt updatedAt");
+
+    res.status(200).json({
+      count: programs.length,
+      programs
+    });
+  } catch (error) {
+    console.error(`Error fetching programs by offering ID:`, error);
+    res.status(500).json({
+      message: `Failed to fetch programs by offering ID`,
+      error: (error as Error).message
+    });
+  }
+};
 export const getAllPrograms = async (req: Request, res: Response) => {
   try {
-    const { offeringType } = req.query;
+    const { offeringType, offering } = req.query;
 
     let query = Program.find();
 
@@ -19,10 +53,15 @@ export const getAllPrograms = async (req: Request, res: Response) => {
       const offeringIds = offerings.map(o => o._id);
 
       query = Program.find({ offering: { $in: offeringIds } });
+    } else if (offering) {
+      // Add this condition to support filtering by offering ID
+      if (mongoose.Types.ObjectId.isValid(offering as string)) {
+        query = Program.find({ offering: offering });
+      }
     }
 
     const programs = await query
-      .populate("offering", "name offeringType description")
+      .populate("offering", "name description description2")
       .populate({
         path: "modules",
         select: "name description topics estimatedDuration",
@@ -277,18 +316,18 @@ export const deleteProgram = async (req: Request, res: Response) => {
 
 export const getProgramsByOfferingType = async (req: Request, res: Response) => {
   try {
-    const { offeringType } = req.params;
+    const { name } = req.params;
 
-    if (!['Marathon', 'Sprint'].includes(offeringType)) {
+    if (!['Marathon', 'Sprint'].includes(name)) {
       return res.status(400).json({
         message: "Invalid offering type. Must be either 'Marathon' or 'Sprint'"
       });
     }
+    console.log(await Offering.find({}));
+    const offering = await Offering.findOne({ name });
+    console.log(offering);
 
-    const offerings = await Offering.find({ offeringType });
-    const offeringIds = offerings.map(o => o._id);
-
-    const programs = await Program.find({ offering: { $in: offeringIds } })
+    const programs = await Program.find({ offering: offering._id })
       .populate("offering", "name offeringType description")
       .populate({
         path: "modules",
@@ -305,7 +344,7 @@ export const getProgramsByOfferingType = async (req: Request, res: Response) => 
       programs
     });
   } catch (error) {
-    console.error(`Error fetching programs by offering type:`, error);
+    console.log(`Error fetching programs by offering type:`, error);
     res.status(500).json({
       message: `Failed to fetch programs by offering type`,
       error: (error as Error).message

@@ -69,8 +69,8 @@ const ProgramSchema = new Schema<IProgram>(
 export interface IOffering extends Document {
   name: string;
   description: string;
+  description2: string;
   estimatedDuration: number;
-  offeringType: 'Marathon' | 'Sprint';
   programs: Types.ObjectId[];
 }
 
@@ -78,12 +78,8 @@ const OfferingSchema = new Schema<IOffering>(
   {
     name: { type: String, unique: true, required: true },
     description: { type: String, required: true },
+    description2: { type: String, required: true },
     estimatedDuration: { type: Number, required: true },
-    offeringType: {
-      type: String,
-      enum: ['Marathon', 'Sprint'],
-      required: true
-    },
     programs: [{ type: Schema.Types.ObjectId, ref: "Program" }],
   },
   { timestamps: true }
