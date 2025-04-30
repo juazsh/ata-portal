@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
-import { Link, useNavigate } from "wouter"
+import { Link } from "wouter"
 import { useToast } from "@/hooks/use-toast"
 
 
@@ -29,7 +29,6 @@ export default function SprintPage() {
     const fetchPrograms = async () => {
       setIsLoading(true)
       try {
-        // Fetch programs using the updated endpoint that accepts offering name
         const response = await fetch("/api/programs/public/offering-type/Sprint")
 
         if (!response.ok) {
