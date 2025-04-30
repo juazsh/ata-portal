@@ -6,6 +6,8 @@ import { Button } from "@/components/ui/button"
 import { useToast } from "@/hooks/use-toast"
 import { Link } from "wouter"
 
+import logoImage from "@/assets/images/new_logo.png";
+
 
 interface Program {
   _id: string
@@ -29,7 +31,6 @@ export default function MarathonPage() {
     const fetchPrograms = async () => {
       setIsLoading(true)
       try {
-        // Fetch programs using the updated endpoint that accepts offering name
         const response = await fetch("/api/programs/public/offering-type/Marathon")
 
         if (!response.ok) {
@@ -72,10 +73,13 @@ export default function MarathonPage() {
     <div className="container mx-auto py-10">
       <div className="mb-8">
         <div className="flex items-center justify-between">
-          <div>
-            <h1 className="text-4xl font-bold tracking-tight text-primary">STEM Masters</h1>
-            <p className="text-muted-foreground mt-1">Excellence in STEM Education</p>
-          </div>
+          <img
+            src={logoImage}
+            alt="STEM Masters Logo"
+            width={240}
+            height={120}
+            className="object-contain h-20"
+          />
           <Link href="/enroll">
             <Button variant="outline" size="sm">
               ← Back to offerings

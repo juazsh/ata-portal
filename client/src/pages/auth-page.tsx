@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button"
 import { LoginForm } from "@/components/auth/login-form"
 import { useTheme } from "@/hooks/use-theme"
 import { MoonIcon, SunIcon } from "lucide-react"
-import logoImage from "@/assets/images/stemmasters_logo.png";
+import logoImage from "@/assets/images/new_logo.png";
 
 export default function AuthPage() {
   const { user, isLoading } = useAuth()
@@ -41,14 +41,14 @@ export default function AuthPage() {
                 alt="STEM Masters Logo"
                 width={240}
                 height={120}
-                className="object-contain h-16"
+                className="object-contain h-32"
               />
             </div>
           </div>
-          <h1 className="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-purple-600 to-blue-500">
+          {/* <h1 className="text-3xl font-bold bg-clip-text text-transparent bg-gradient-to-r from-purple-600 to-blue-500">
             Welcome to STEM Masters
-          </h1>
-          <p className="mt-2 text-sm text-slate-600 dark:text-slate-400">A product of AletTau Technologies</p>
+          </h1> */}
+          {/* <p className="mt-2 text-sm text-slate-600 dark:text-slate-400">A product of AletTau Technologies</p> */}
         </div>
 
         <p className="mt-2 text-sm text-slate-600 dark:text-slate-400">Please log in to continue</p>

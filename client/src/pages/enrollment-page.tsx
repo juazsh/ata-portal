@@ -5,8 +5,7 @@ import { Link } from "wouter"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { useToast } from "@/hooks/use-toast"
-import { StemMastersHero } from "@/components/stem-masters-hero"
-import smstudentImg from "@/assets/images/stem-master-logo.jpeg";
+import logoImage from "@/assets/images/new_logo.png";
 import smclassroomImg from "@/assets/images/stem-masters-classrom.jpeg";
 import smcodingImg from "@/assets/images/stem-masters-coding.jpeg";
 
@@ -52,8 +51,13 @@ export default function EnrollmentPage() {
     <div className="container mx-auto py-10">
       <div className="mb-8">
         <div className="mb-6">
-          <h1 className="text-4xl font-bold tracking-tight text-primary">STEM Masters</h1>
-          <p className="text-muted-foreground mt-1">Excellence in STEM Education</p>
+          <img
+            src={logoImage}
+            alt="STEM Masters Logo"
+            width={240}
+            height={120}
+            className="object-contain h-20"
+          />
         </div>
         <div className="mt-6">
           <h2 className="text-3xl font-bold">Choose Your Learning Path</h2>
@@ -71,14 +75,12 @@ export default function EnrollmentPage() {
       ) : (
         <div className="grid md:grid-cols-2 gap-6">
           {offerings.map((offering) => {
-            // Determine the route based on the name
             const route = offering.name.toLowerCase().includes("marathon")
               ? "/marathon"
               : offering.name.toLowerCase().includes("sprint")
                 ? "/sprint"
                 : `/offering/${offering._id}`
 
-            // Determine the image based on the offering name
             const imagePath = offering.name.toLowerCase().includes("marathon")
               ? smclassroomImg
               : smcodingImg

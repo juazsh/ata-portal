@@ -7,6 +7,7 @@ import { useParams } from "wouter"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { useToast } from "@/hooks/use-toast"
+import logoImage from "@/assets/images/new_logo.png";
 
 import { EnrollmentDetails } from "@/components/enrollment/enrollment-details"
 import { ParentInfoForm } from "@/components/enrollment/parent-info-form"
@@ -303,10 +304,13 @@ const FinalizeEnrollment = () => {
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950 py-10 px-4">
       <div className="container mx-auto max-w-4xl">
         <div className="mb-8">
-          <div className="mb-6">
-            <h1 className="text-4xl font-bold tracking-tight text-primary">STEM Masters</h1>
-            <p className="text-muted-foreground mt-1">Excellence in STEM Education</p>
-          </div>
+          <img
+            src={logoImage}
+            alt="STEM Masters Logo"
+            width={240}
+            height={120}
+            className="object-contain h-20"
+          />
           <div className="mt-6">
             <h2 className="text-3xl font-bold">Enrollment</h2>
             <div className="h-1 w-20 bg-primary mt-2 rounded-full"></div>
