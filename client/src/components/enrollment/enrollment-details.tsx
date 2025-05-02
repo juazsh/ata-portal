@@ -6,6 +6,7 @@ import { Separator } from "@/components/ui/separator"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Calendar } from "@/components/ui/calendar"
 import { CalendarIcon } from "lucide-react"
+import { Badge } from "@/components/ui/badge"
 import type { Program, FormData } from "./enrollment-types"
 
 interface EnrollmentDetailsProps {
@@ -41,13 +42,17 @@ export function EnrollmentDetails({
         <div>
           <h2 className="text-xl font-semibold text-slate-900 dark:text-slate-50 mb-4">Program Details</h2>
           <div className="space-y-4 bg-slate-100 dark:bg-slate-800 p-4 rounded-lg">
-            <div className="flex justify-between">
+            <div className="flex justify-between items-center">
               <span className="text-slate-600 dark:text-slate-400">Program:</span>
-              <span className="font-medium text-slate-900 dark:text-slate-50">{program.name}</span>
+              <Badge variant="outline" className="font-medium text-slate-900 dark:text-slate-50 px-3 py-1 uppercase">
+                {program.name}
+              </Badge>
             </div>
-            <div className="flex justify-between">
+            <div className="flex justify-between items-center">
               <span className="text-slate-600 dark:text-slate-400">Membership:</span>
-              <span className="font-medium text-slate-900 dark:text-slate-50">{program.offering.name}</span>
+              <Badge variant="outline" className="font-medium text-slate-900 dark:text-slate-50 px-3 py-1 uppercase">
+                {program.offering.name}
+              </Badge>
             </div>
             <div className="flex justify-between items-center">
               <span className="text-slate-600 dark:text-slate-400">Start Date:</span>

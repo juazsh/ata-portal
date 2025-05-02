@@ -230,15 +230,7 @@ const FinalizeEnrollment = () => {
       formData.parentFirstName.trim() !== "" &&
       formData.parentLastName.trim() !== "" &&
       formData.parentEmail.trim() !== "" &&
-      formData.parentPassword.trim() !== "" &&
-      formData.parentConfirmPassword.trim() !== "" &&
-      formData.parentPhone.trim() !== "" &&
-      formData.parentAddress.trim() !== "" &&
-      formData.parentCity.trim() !== "" &&
-      formData.parentZip.trim() !== "" &&
-      formData.parentState.trim() !== "" &&
-      formData.parentCountry.trim() !== "" &&
-      formData.parentPassword === formData.parentConfirmPassword
+      formData.parentPhone.trim() !== ""
     )
   }
 
@@ -246,11 +238,7 @@ const FinalizeEnrollment = () => {
     return (
       formData.childFirstName.trim() !== "" &&
       formData.childLastName.trim() !== "" &&
-      formData.childDOB.trim() !== "" &&
-      formData.childEmail.trim() !== "" &&
-      formData.childPassword.trim() !== "" &&
-      formData.childConfirmPassword.trim() !== "" &&
-      formData.childPassword === formData.childConfirmPassword
+      formData.childDOB.trim() !== ""
     )
   }
 
@@ -393,32 +381,38 @@ const FinalizeEnrollment = () => {
                   className="w-full"
                 >
                   <TabsList className="grid grid-cols-4 mb-8">
-                    <TabsTrigger value="details" className="flex items-center gap-2">
+                    <TabsTrigger
+                      value="details"
+                      className="flex items-center gap-2 data-[state=active]:bg-black data-[state=active]:text-white"
+                    >
                       <InfoIcon className="h-4 w-4" />
                       <span className="hidden sm:inline">Enrollment Details</span>
                     </TabsTrigger>
                     <TabsTrigger
                       value="parent"
-                      className="flex items-center gap-2"
+                      className="flex items-center gap-2 data-[state=active]:bg-black data-[state=active]:text-white"
                       disabled={!formData.enrollmentDate || !isValidDate(formData.enrollmentDate)}
                     >
                       <UserIcon className="h-4 w-4" />
                       <span className="hidden sm:inline">Parent Info</span>
                     </TabsTrigger>
-                    <TabsTrigger value="child" className="flex items-center gap-2" disabled={!isParentInfoComplete()}>
+                    <TabsTrigger
+                      value="child"
+                      className="flex items-center gap-2 data-[state=active]:bg-black data-[state=active]:text-white"
+                      disabled={!isParentInfoComplete()}
+                    >
                       <GraduationCapIcon className="h-4 w-4" />
                       <span className="hidden sm:inline">Student Info</span>
                     </TabsTrigger>
                     <TabsTrigger
                       value="payment"
-                      className="flex items-center gap-2"
+                      className="flex items-center gap-2 data-[state=active]:bg-black data-[state=active]:text-white"
                       disabled={!isStudentInfoComplete()}
                     >
                       <CreditCardIcon className="h-4 w-4" />
                       <span className="hidden sm:inline">Payment</span>
                     </TabsTrigger>
                   </TabsList>
-
                   <TabsContent value="details" className="space-y-6">
                     <EnrollmentDetails
                       program={program}

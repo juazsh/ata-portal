@@ -61,6 +61,15 @@ import {
   getStudentProgressHandler
 } from "./handlers/students-progress";
 
+import {
+  addDiscountCode,
+  getDiscountCodes,
+  getDiscountCodeByCode,
+  updateDiscountCode,
+  deleteDiscountCode,
+  verifyDiscountCode,
+  updateExpirationDate
+} from "./handlers/discount-codes";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   const { isAuthenticated, hasRole } = await setupAuth(app);
@@ -267,6 +276,52 @@ export async function registerRoutes(app: Express): Promise<Server> {
   app.get('/enrollments/success', isAuthenticated, handlePayPalSuccess);
   app.get('/enrollments/cancel', isAuthenticated, handlePayPalCancel);
 
+  app.post(
+    "/api/discount-codes",
+    isAuthenticated,
+    hasRole([UserRole.ADMIN, UserRole.OWNER]),
+    addDiscountCode
+  );
+
+  app.get(
+    "/api/discount-codes",
+    isAuthenticated,
+    hasRole([UserRole.ADMIN, UserRole.OWNER]),
+    getDiscountCodes
+  );
+
+  app.get(
+    "/api/discount-codes/:code",
+    isAuthenticated,
+    hasRole([UserRole.ADMIN, UserRole.OWNER]),
+    getDiscountCodeByCode
+  );
+
+  app.put(
+    "/api/discount-codes/:code",
+    isAuthenticated,
+    hasRole([UserRole.ADMIN, UserRole.OWNER]),
+    updateDiscountCode
+  );
+
+  app.delete(
+    "/api/discount-codes/:code",
+    isAuthenticated,
+    hasRole([UserRole.ADMIN, UserRole.OWNER]),
+    deleteDiscountCode
+  );
+
+  app.patch(
+    "/api/discount-codes/:code/expire",
+    isAuthenticated,
+    hasRole([UserRole.ADMIN, UserRole.OWNER]),
+    updateExpirationDate
+  );
+
+  app.get(
+    "/api/discount-codes/:code/verify",
+    verifyDiscountCode
+  );
 
   // >> Create HTTP server
   const httpServer = createServer(app);

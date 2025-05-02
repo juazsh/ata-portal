@@ -1,6 +1,7 @@
 "use client"
 
 import type React from "react"
+import { useState } from "react"
 
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -38,18 +39,32 @@ export function PaymentForm({
   setActiveTab,
   isLoading,
 }: PaymentFormProps) {
+  const [showDiscountField, setShowDiscountField] = useState(false);
+
   return (
     <>
       <div className="p-4 bg-slate-100 dark:bg-slate-800 rounded-lg space-y-4">
-        <div className="space-y-2">
-          <Label htmlFor="discountCode">Enter Discount Code</Label>
-          <Input
-            id="discountCode"
-            value={discountCode}
-            onChange={(e) => setDiscountCode(e.target.value)}
-            placeholder="Enter code if you have one"
-          />
-        </div>
+        {showDiscountField ? (
+          <div className="space-y-2">
+            <Label htmlFor="discountCode" className="text-sm">Enter Discount Code</Label>
+            <Input
+              id="discountCode"
+              value={discountCode}
+              onChange={(e) => setDiscountCode(e.target.value)}
+              placeholder="Enter code"
+              className="h-8 text-sm"
+            />
+          </div>
+        ) : (
+          <Button
+            type="button"
+            variant="link"
+            className="text-sm p-0 h-auto"
+            onClick={() => setShowDiscountField(true)}
+          >
+            Have a discount code?
+          </Button>
+        )}
 
         <Separator className="my-4" />
 
@@ -60,21 +75,14 @@ export function PaymentForm({
           </div>
           <div className="flex justify-between border-b border-slate-200 dark:border-slate-700 pb-2">
             <span className="text-slate-600 dark:text-slate-400">1st Payment:</span>
-            <span className="font-medium text-slate-900 dark:text-slate-50">
-              ${formData.enrollmentDate ? getFirstPaymentAmount().toFixed(2) : "0.00"}
-            </span>
-          </div>
-          <div className="flex justify-between border-b border-slate-200 dark:border-slate-700 pb-2">
-            <span className="text-slate-600 dark:text-slate-400">Admin Fee (3%):</span>
-            <span className="font-medium text-slate-900 dark:text-slate-50">${getAdminFee().toFixed(2)}</span>
-          </div>
-          <div className="flex justify-between border-b border-slate-200 dark:border-slate-700 pb-2">
-            <span className="text-slate-600 dark:text-slate-400">Tax Amount (5%):</span>
-            <span className="font-medium text-slate-900 dark:text-slate-50">${getTaxAmount().toFixed(2)}</span>
-          </div>
-          <div className="flex justify-between pt-2">
-            <span className="text-slate-900 dark:text-slate-50 font-semibold">Total Amount Due:</span>
-            <span className="text-slate-900 dark:text-slate-50 font-semibold">${getTotalAmountDue().toFixed(2)}</span>
+            <div className="flex flex-col items-end">
+              <span className="font-medium text-slate-900 dark:text-slate-50">
+                ${formData.enrollmentDate ? getFirstPaymentAmount().toFixed(2) : "0.00"}
+              </span>
+              <span className="text-xs text-slate-500 dark:text-slate-400">
+                Admin: ${getAdminFee().toFixed(2)} • Tax: ${getTaxAmount().toFixed(2)}
+              </span>
+            </div>
           </div>
         </div>
       </div>
@@ -128,22 +136,23 @@ export function PaymentForm({
         <Button type="button" variant="outline" onClick={() => setActiveTab("child")}>
           Back to Student Info
         </Button>
-        <Button type="submit" disabled={isLoading || !formData.enrollmentDate} className="min-w-[150px]">
-          {isLoading ? "Processing..." : "Complete Enrollment"}
-        </Button>
-      </div>
 
-      {formData.paymentMethod === "paypal" && (
-        <Button
-          type="button"
-          variant="outline"
-          className="w-full flex items-center justify-center gap-2 bg-blue-600 text-white hover:bg-blue-700 mt-4"
-          disabled={isLoading}
-        >
-          <PaypalIcon className="h-5 w-5" />
-          Pay with PayPal
-        </Button>
-      )}
+        {formData.paymentMethod === "paypal" ? (
+          <Button
+            type="button"
+            variant="outline"
+            className="flex items-center justify-center gap-2 bg-blue-600 text-white hover:bg-blue-700"
+            disabled={isLoading}
+          >
+            <PaypalIcon className="h-5 w-5" />
+            Pay with PayPal
+          </Button>
+        ) : (
+          <Button type="submit" disabled={isLoading || !formData.enrollmentDate} className="min-w-[150px]">
+            {isLoading ? "Processing..." : "Complete Enrollment"}
+          </Button>
+        )}
+      </div>
     </>
   )
 }
