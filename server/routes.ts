@@ -71,8 +71,80 @@ import {
   updateExpirationDate
 } from "./handlers/discount-codes";
 
+import {
+  createRegistration,
+  getRegistrationById,
+  getRegistrations,
+  verifyRegistration,
+  deleteRegistration
+} from "./handlers/registrations";
+
+import {
+  createDemoRegistration,
+  getDemoRegistrations,
+  getDemoRegistrationById,
+  updateDemoRegistration,
+  deleteDemoRegistration
+} from "./handlers/demo-registrations";
+
 export async function registerRoutes(app: Express): Promise<Server> {
+
   const { isAuthenticated, hasRole } = await setupAuth(app);
+
+  app.post("/api/registrations", createRegistration);
+
+  app.get(
+    "/api/registrations",
+    isAuthenticated,
+    hasRole([UserRole.ADMIN, UserRole.OWNER]),
+    getRegistrations
+  );
+
+  app.get(
+    "/api/registrations/:registrationId",
+    getRegistrationById
+  );
+
+  app.patch(
+    "/api/registrations/:registrationId/verify",
+    verifyRegistration
+  );
+
+  app.delete(
+    "/api/registrations/:registrationId",
+    isAuthenticated,
+    hasRole([UserRole.ADMIN, UserRole.OWNER]),
+    deleteRegistration
+  );
+  app.post("/api/demo-registrations", createDemoRegistration);
+
+  app.get(
+    "/api/demo-registrations",
+    isAuthenticated,
+    hasRole([UserRole.ADMIN, UserRole.OWNER]),
+    getDemoRegistrations
+  );
+
+  app.get(
+    "/api/demo-registrations/:demoRegistrationId",
+    isAuthenticated,
+    hasRole([UserRole.ADMIN, UserRole.OWNER]),
+    getDemoRegistrationById
+  );
+
+  app.put(
+    "/api/demo-registrations/:demoRegistrationId",
+    isAuthenticated,
+    hasRole([UserRole.ADMIN, UserRole.OWNER]),
+    updateDemoRegistration
+  );
+
+  app.delete(
+    "/api/demo-registrations/:demoRegistrationId",
+    isAuthenticated,
+    hasRole([UserRole.ADMIN, UserRole.OWNER]),
+    deleteDemoRegistration
+  );
 
   app.get("/api/users", isAuthenticated, hasRole([UserRole.ADMIN]), async (req, res) => {
     try {

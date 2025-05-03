@@ -56,7 +56,17 @@ export function StudentInfoForm({ formData, handleChange, setActiveTab }: Studen
         <Label htmlFor="childDOB">
           Date of Birth <span className="text-red-500">*</span>
         </Label>
-        <Input id="childDOB" name="childDOB" type="date" value={formData.childDOB} onChange={handleChange} required />
+        <Input
+          id="childDOB"
+          name="childDOB"
+          type="date"
+          value={formData.childDOB}
+          onChange={handleChange}
+          max={new Date(new Date().setFullYear(new Date().getFullYear() - 6)).toISOString().split('T')[0]}
+          min={new Date(new Date().setFullYear(new Date().getFullYear() - 18)).toISOString().split('T')[0]}
+          required
+        />
+        <p className="text-sm text-slate-500">Student must be between 6 and 18 years old</p>
       </div>
 
       <div className="flex justify-between mt-6">

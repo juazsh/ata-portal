@@ -14,14 +14,25 @@ interface ParentInfoFormProps {
 }
 
 export function ParentInfoForm({ formData, handleChange, setActiveTab }: ParentInfoFormProps) {
-  // Function to check if all required fields are completed
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+
+  const phoneRegex = /^(\+?1[-.\s]?)?(\(?\d{3}\)?[-.\s]?)?\d{3}[-.\s]?\d{4}$/
+
+
   const isParentInfoComplete = () => {
     return (
       formData.parentFirstName.trim() !== "" &&
       formData.parentLastName.trim() !== "" &&
       formData.parentEmail.trim() !== "" &&
-      formData.parentPhone.trim() !== ""
+      emailRegex.test(formData.parentEmail) &&
+      formData.parentPhone.trim() !== "" &&
+      phoneRegex.test(formData.parentPhone)
     )
+  }
+
+  // Enhanced handleChange with validation
+  const handleChangeWithValidation = (e: React.ChangeEvent<HTMLInputElement>) => {
+    handleChange(e)
   }
 
   return (
@@ -63,16 +74,39 @@ export function ParentInfoForm({ formData, handleChange, setActiveTab }: ParentI
           name="parentEmail"
           type="email"
           value={formData.parentEmail}
-          onChange={handleChange}
+          onChange={handleChangeWithValidation}
           required
+          className={
+            formData.parentEmail && !emailRegex.test(formData.parentEmail)
+              ? "border-red-500"
+              : ""
+          }
         />
+        {formData.parentEmail && !emailRegex.test(formData.parentEmail) && (
+          <p className="text-red-500 text-sm mt-1">Please enter a valid email address</p>
+        )}
       </div>
 
       <div className="mt-4 space-y-2">
         <Label htmlFor="parentPhone">
           Phone Number <span className="text-red-500">*</span>
         </Label>
-        <Input id="parentPhone" name="parentPhone" value={formData.parentPhone} onChange={handleChange} required />
+        <Input
+          id="parentPhone"
+          name="parentPhone"
+          value={formData.parentPhone}
+          onChange={handleChangeWithValidation}
+          placeholder="(123) 456-7890"
+          required
+          className={
+            formData.parentPhone && !phoneRegex.test(formData.parentPhone)
+              ? "border-red-500"
+              : ""
+          }
+        />
+        {formData.parentPhone && !phoneRegex.test(formData.parentPhone) && (
+          <p className="text-red-500 text-sm mt-1">Please enter a valid phone number</p>
+        )}
       </div>
 
       <div className="flex justify-between mt-6">

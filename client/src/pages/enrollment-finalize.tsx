@@ -6,6 +6,9 @@ import { useState, useEffect } from "react"
 import { useParams } from "wouter"
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog"
+import { Button } from "@/components/ui/button"
+import { CheckCircle } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import logoImage from "@/assets/images/new_logo.png";
 
@@ -58,6 +61,7 @@ const FinalizeEnrollment = () => {
   const [success, setSuccess] = useState("")
   const [activeTab, setActiveTab] = useState("details")
   const [discountCode, setDiscountCode] = useState("")
+  const [showSuccessModal, setShowSuccessModal] = useState(false)
 
   useEffect(() => {
     const fetchProgramDetails = async () => {
@@ -123,18 +127,6 @@ const FinalizeEnrollment = () => {
     setError("")
     setSuccess("")
 
-    if (formData.parentPassword !== formData.parentConfirmPassword) {
-      setError("Parent passwords do not match")
-      setIsLoading(false)
-      return
-    }
-
-    if (formData.childPassword !== formData.childConfirmPassword) {
-      setError("Child passwords do not match")
-      setIsLoading(false)
-      return
-    }
-
     try {
       if (!program || !formData.enrollmentDate) {
         setError("Program information or enrollment date is missing")
@@ -142,61 +134,50 @@ const FinalizeEnrollment = () => {
         return
       }
 
-      const response = await fetch("/api/auth/signup", {
+      // Calculate payment amounts
+      const firstPaymentAmount = getFirstPaymentAmount()
+      const adminFee = getAdminFee()
+      const taxAmount = getTaxAmount()
+      const totalAmountDue = getTotalAmountDue()
+
+      // Create registration payload
+      const registrationData = {
+        // Parent Information
+        parentFirstName: formData.parentFirstName,
+        parentLastName: formData.parentLastName,
+        parentEmail: formData.parentEmail,
+        parentPhone: formData.parentPhone,
+
+        // Student Information
+        studentFirstName: formData.childFirstName,
+        studentLastName: formData.childLastName,
+        studentDOB: formData.childDOB,
+
+        // Program Information
+        programId: program._id,
+        offeringId: program.offering._id,
+        enrollmentDate: formData.enrollmentDate.toISOString(),
+
+        // Payment Information
+        paymentMethod: formData.paymentMethod,
+        firstPaymentAmount,
+        adminFee,
+        taxAmount,
+        totalAmountDue,
+        discountCode: discountCode || undefined,
+
+        // Registration Status (initial values)
+        isRegistrationComplete: false,
+        isRegLinkedWithEnrollment: false,
+        isUserSetup: false
+      }
+
+      const response = await fetch("/api/registrations", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({
-          parent: {
-            firstName: formData.parentFirstName,
-            lastName: formData.parentLastName,
-            email: formData.parentEmail,
-            password: formData.parentPassword,
-            phone: formData.parentPhone,
-            address: {
-              street: formData.parentAddress,
-              city: formData.parentCity,
-              state: formData.parentState,
-              zip: formData.parentZip,
-              country: formData.parentCountry,
-            },
-            role: "parent",
-          },
-          child: {
-            firstName: formData.childFirstName,
-            lastName: formData.childLastName,
-            email: formData.childEmail,
-            password: formData.childPassword,
-            phone: formData.childPhone,
-            address: {
-              street: formData.childAddress,
-              city: formData.childCity,
-              state: formData.childState,
-              zip: formData.childZip,
-              country: formData.childCountry,
-            },
-            dateOfBirth: formData.childDOB,
-            role: "student",
-          },
-          programDetails: {
-            programId: program._id,
-            offeringId: program.offering._id,
-            startDate: formData.enrollmentDate.toISOString(),
-            price: program.price,
-          },
-          paymentDetails: {
-            method: formData.paymentMethod,
-            cardDetails:
-              formData.paymentMethod === "credit-card"
-                ? {
-                  number: formData.cardNumber,
-                  expiry: formData.cardExpiry,
-                  cvc: formData.cardCVC,
-                }
-                : undefined,
-          },
-        }),
+        body: JSON.stringify(registrationData),
       })
 
       const data = await response.json()
@@ -205,10 +186,8 @@ const FinalizeEnrollment = () => {
         throw new Error(data.message || "Something went wrong")
       }
 
-      setSuccess("Registration successful! Redirecting to login...")
-      setTimeout(() => {
-        window.location.href = "/signin"
-      }, 2000)
+      setSuccess("Registration submitted successfully!")
+      setShowSuccessModal(true)
     } catch (err: any) {
       setError(err.message || "An error occurred during registration")
     } finally {
@@ -457,6 +436,38 @@ const FinalizeEnrollment = () => {
           </Card>
         </div>
       </div>
+
+      {/* Success Modal */}
+      <Dialog open={showSuccessModal} onOpenChange={setShowSuccessModal}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <div className="flex items-center justify-center mb-4">
+              <CheckCircle className="h-16 w-16 text-green-500" />
+            </div>
+            <DialogTitle className="text-center text-2xl">Registration Successful!</DialogTitle>
+            <DialogDescription className="text-center pt-4">
+              <p className="text-base">
+                Thank you for registering! An email regarding the enrollment has been sent to{" "}
+                <span className="font-medium">{formData.parentEmail}</span>.
+              </p>
+              <p className="mt-4 text-base">
+                Please check your email for further instructions to complete the enrollment process.
+              </p>
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex justify-center mt-6">
+            <Button
+              onClick={() => {
+                setShowSuccessModal(false)
+                window.location.href = "/"
+              }}
+              className="w-full sm:w-auto"
+            >
+              Go to Homepage
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }

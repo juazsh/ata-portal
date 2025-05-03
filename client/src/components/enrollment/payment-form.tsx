@@ -139,7 +139,7 @@ export function PaymentForm({
 
         {formData.paymentMethod === "paypal" ? (
           <Button
-            type="button"
+            type="submit"
             variant="outline"
             className="flex items-center justify-center gap-2 bg-blue-600 text-white hover:bg-blue-700"
             disabled={isLoading}

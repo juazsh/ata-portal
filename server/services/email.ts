@@ -1,5 +1,4 @@
 import nodemailer from 'nodemailer';
-
 import SMTPTransport from 'nodemailer/lib/smtp-transport';
 
 const transporter = nodemailer.createTransport({
@@ -12,15 +11,33 @@ const transporter = nodemailer.createTransport({
   }
 } as SMTPTransport.Options);
 
-export const sendMail = async (to: string, subject: string, emailBody: string) => {
+interface EmailOptions {
+  to: string;
+  subject: string;
+  html: string;
+  attachments?: {
+    filename: string;
+    content: Buffer;
+    contentType?: string;
+  }[];
+}
+
+export const sendMail = async ({ to, subject, html, attachments }: EmailOptions) => {
+  console.dir(process.env);
   const mailOptions = {
     from: process.env.EMAIL_ADDRESS,
     to,
     subject,
-    html: emailBody
+    html,
+    attachments
+  };
+
+  try {
+    const info = await transporter.sendMail(mailOptions);
+    console.log('Email sent:', info.messageId);
+    return info;
+  } catch (error) {
+    console.error('Error sending email:', error);
+    throw error;
   }
-  await transporter.sendMail(mailOptions, (error: any, info: any) => {
-    console.log(error)
-    console.log(info)
-  })
-}
+};

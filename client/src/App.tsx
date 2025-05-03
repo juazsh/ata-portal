@@ -8,6 +8,7 @@ import SprintPage from "./pages/sprint-page";
 import Dashboard from "@/pages/dashboard";
 import { ProtectedRoute } from "@/lib/protected-route";
 import FinalizeEnrollment from "./pages/enrollment-finalize";
+import DemoClassRegistration from "./pages/demo-registration";
 
 function Router() {
   return (
@@ -17,6 +18,7 @@ function Router() {
       <Route path="/marathon" component={MarathonPage} />
       <Route path="/sprint" component={SprintPage} />
       <Route path="/finalize/:pid" component={FinalizeEnrollment} />
+      <Route path="/demo-registration" component={DemoClassRegistration} />
 
       <ProtectedRoute path="/" component={Dashboard} />
       <ProtectedRoute path="/students" component={Dashboard} />

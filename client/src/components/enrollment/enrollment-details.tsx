@@ -6,7 +6,7 @@ import { Separator } from "@/components/ui/separator"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Calendar } from "@/components/ui/calendar"
 import { CalendarIcon } from "lucide-react"
-import { Badge } from "@/components/ui/badge"
+import { Badge } from "@/components/ui/badge" // Import Badge component
 import type { Program, FormData } from "./enrollment-types"
 
 interface EnrollmentDetailsProps {
