@@ -9,6 +9,8 @@ import Dashboard from "@/pages/dashboard";
 import { ProtectedRoute } from "@/lib/protected-route";
 import FinalizeEnrollment from "./pages/enrollment-finalize";
 import DemoClassRegistration from "./pages/demo-registration";
+import PortalEntryForm from "./pages/portal-entry";
+
 
 function Router() {
   return (
@@ -19,7 +21,7 @@ function Router() {
       <Route path="/sprint" component={SprintPage} />
       <Route path="/finalize/:pid" component={FinalizeEnrollment} />
       <Route path="/demo-registration" component={DemoClassRegistration} />
-
+      <Route path="/portal-entry/:rid" component={PortalEntryForm} />
       <ProtectedRoute path="/" component={Dashboard} />
       <ProtectedRoute path="/students" component={Dashboard} />
       <ProtectedRoute path="/add-location" component={Dashboard} />
