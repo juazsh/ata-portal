@@ -1,6 +1,8 @@
 {
   "variant": "professional",
-  "primary": "hsl(222.2 47.4% 11.2%)",
+  "primary": "hsl(142, 65%, 47%)",
+  "secondary": "hsl(0, 77%, 62%)",
+  "accent": "hsl(207, 94%, 67%)",
   "appearance": "light",
-  "radius": 0.5
+  "radius": 1.5
 }

@@ -86,11 +86,14 @@ import {
   updateDemoRegistration,
   deleteDemoRegistration
 } from "./handlers/demo-registrations";
+import { createPortalAccount } from "./handlers/portal-account";
 
 export async function registerRoutes(app: Express): Promise<Server> {
 
   const { isAuthenticated, hasRole } = await setupAuth(app);
 
+
+  app.post("/api/create-portal-account", createPortalAccount);
   app.post("/api/registrations", createRegistration);
 
   app.get(

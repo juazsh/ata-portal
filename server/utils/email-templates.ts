@@ -8,7 +8,7 @@ interface RegistrationEmailData {
 }
 
 export function getRegistrationEmailTemplate(data: RegistrationEmailData): string {
-  const portalLink = `${process.env.APP_URL}/create-account?registrationId=${data.registrationId}&email=${encodeURIComponent(data.parentEmail)}`;
+  const portalLink = `${process.env.APP_URL}portal-entry/${data.registrationId}`;
 
   return `
     <!DOCTYPE html>

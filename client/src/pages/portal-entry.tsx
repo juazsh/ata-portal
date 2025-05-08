@@ -87,6 +87,7 @@ const PortalEntryForm = () => {
   const [showErrorModal, setShowErrorModal] = useState(false)
   const [showSuccessModal, setShowSuccessModal] = useState(false)
   const [errorMessage, setErrorMessage] = useState("")
+  const [registrationData, setRegistrationData] = useState<any>(null)
   const [formData, setFormData] = useState<PortalAccountFormData>({
     password: "",
     confirmPassword: "",
@@ -101,15 +102,26 @@ const PortalEntryForm = () => {
   useEffect(() => {
     const verifyRegistrationId = async () => {
       try {
-        const response = await fetch(`/api/verify-registration/${params.rid}`, {
+        const response = await fetch(`/api/registrations/${params.rid}`, {
           method: "GET",
         })
 
         if (!response.ok) {
           const data = await response.json()
-          setErrorMessage(data.message || "Link expired or account already created for this registration ID")
+          setErrorMessage(data.message || "Registration not found")
           setShowErrorModal(true)
+          return
         }
+
+        const registration = await response.json()
+
+        if (registration.isRegistrationComplete || registration.isRegLinkedWithEnrollment || registration.isUserSetup) {
+          setErrorMessage("Link expired or account already created for this registration ID")
+          setShowErrorModal(true)
+          return
+        }
+
+        setRegistrationData(registration)
       } catch (error) {
         console.error("Verification error:", error)
         setErrorMessage("Failed to verify registration. Please try again.")
@@ -151,7 +163,7 @@ const PortalEntryForm = () => {
       formData.state.trim() !== "" &&
       formData.zipCode.trim() !== "" &&
       formData.country.trim() !== "" &&
-      /^\d{5}(-\d{4})?$/.test(formData.zipCode)
+      /^\d{5}(-\d{4})?$/.test(formData.zipCode) // US ZIP code validation
     )
   }
 
@@ -193,6 +205,10 @@ const PortalEntryForm = () => {
         throw new Error(data.message || "Account creation failed")
       }
 
+      if (data.studentUsername) {
+        localStorage.setItem('studentUsername', data.studentUsername)
+      }
+
       setShowSuccessModal(true)
     } catch (error) {
       console.error("Account creation error:", error)
@@ -208,7 +224,7 @@ const PortalEntryForm = () => {
 
   const handleSuccessClose = () => {
     setShowSuccessModal(false)
-    setLocation("/")
+    setLocation("/auth")
   }
 
   if (isVerifying) {
@@ -247,6 +263,22 @@ const PortalEntryForm = () => {
             </CardDescription>
           </CardHeader>
           <CardContent>
+            {registrationData && (
+              <div className="mb-6 p-4 bg-blue-50 dark:bg-blue-950 border border-blue-200 dark:border-blue-800 rounded-lg">
+                <div className="flex items-center gap-2 mb-3">
+                  <span className="bg-blue-100 dark:bg-blue-900 text-blue-800 dark:text-blue-100 text-xs font-semibold px-2.5 py-0.5 rounded">
+                    REGISTRATION INFO
+                  </span>
+                  <h4 className="font-semibold">Please verify this is your registration</h4>
+                </div>
+                <p className="text-sm mb-1">
+                  <span className="font-medium">Parent Name:</span> {registrationData.parentFirstName} {registrationData.parentLastName}
+                </p>
+                <p className="text-sm">
+                  <span className="font-medium">Email:</span> {registrationData.parentEmail}
+                </p>
+              </div>
+            )}
             <form onSubmit={handleSubmit} className="space-y-6">
               <div className="space-y-4">
                 <h3 className="text-lg font-semibold">Account Security</h3>
@@ -413,6 +445,7 @@ const PortalEntryForm = () => {
         </Card>
       </div>
 
+
       <Dialog open={showErrorModal} onOpenChange={setShowErrorModal}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
@@ -437,7 +470,6 @@ const PortalEntryForm = () => {
         </DialogContent>
       </Dialog>
 
-
       <Dialog open={showSuccessModal} onOpenChange={setShowSuccessModal}>
         <DialogContent className="sm:max-w-md">
           <DialogHeader>
@@ -449,7 +481,10 @@ const PortalEntryForm = () => {
             </DialogTitle>
             <DialogDescription className="text-center pt-4">
               <p className="text-base">
-                Your portal account has been created successfully. You can now log in with your credentials.
+                Your portal account has been created successfully. Please check your email for login credentials.
+              </p>
+              <p className="mt-2 text-base">
+                You will now be redirected to the login page.
               </p>
             </DialogDescription>
           </DialogHeader>

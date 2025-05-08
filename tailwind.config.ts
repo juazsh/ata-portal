@@ -4,6 +4,10 @@ export default {
   darkMode: ["class"],
   content: ["./client/index.html", "./client/src/**/*.{js,jsx,ts,tsx}"],
   theme: {
+    fontFamily: {
+      sans: ["Poppins", "-apple-system", "BlinkMacSystemFont", "Segoe UI", "Roboto", "Helvetica", "Arial", "sans-serif", "Apple Color Emoji", "Segoe UI Emoji"],
+      heading: ["Poppins", "-apple-system", "BlinkMacSystemFont", "Segoe UI", "Roboto", "Helvetica", "Arial", "sans-serif"]
+    },
     extend: {
       borderRadius: {
         lg: "var(--radius)",
@@ -84,6 +88,29 @@ export default {
         "accordion-down": "accordion-down 0.2s ease-out",
         "accordion-up": "accordion-up 0.2s ease-out",
       },
+      typography: {
+        DEFAULT: {
+          css: {
+            fontFamily: ["Poppins", "sans-serif"].join(", "),
+            h1: {
+              fontFamily: ["Poppins", "sans-serif"].join(", "),
+              fontWeight: 600
+            },
+            h2: {
+              fontFamily: ["Poppins", "sans-serif"].join(", "),
+              fontWeight: 600
+            },
+            h3: {
+              fontFamily: ["Poppins", "sans-serif"].join(", "),
+              fontWeight: 500
+            },
+            h4: {
+              fontFamily: ["Poppins", "sans-serif"].join(", "),
+              fontWeight: 500
+            }
+          }
+        }
+      }
     },
   },
   plugins: [require("tailwindcss-animate"), require("@tailwindcss/typography")],

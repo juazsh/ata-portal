@@ -119,14 +119,21 @@ export async function setupAuth(app: Express) {
         usernameField: "email",
         passwordField: "password",
       },
-      async (email, password, done) => {
+      async (emailOrUsername, password, done) => {
         try {
-          console.log("[auth] Login attempt for email:", email);
-          const user = await User.findOne({ email });
+          console.log("[auth] Login attempt for email/username:", emailOrUsername);
+
+          // Check if the input is an email or username
+          const user = await User.findOne({
+            $or: [
+              { email: emailOrUsername },
+              { username: emailOrUsername }
+            ]
+          });
 
           if (!user) {
             console.log("[auth] User not found");
-            return done(null, false, { message: "Incorrect email or password" });
+            return done(null, false, { message: "Incorrect email/username or password" });
           }
 
           if (!user.active) {
@@ -139,7 +146,7 @@ export async function setupAuth(app: Express) {
 
           if (!isValidPassword) {
             console.log("[auth] Invalid password");
-            return done(null, false, { message: "Incorrect email or password" });
+            return done(null, false, { message: "Incorrect email/username or password" });
           }
 
           console.log("[auth] Login successful");

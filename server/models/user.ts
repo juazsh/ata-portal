@@ -47,6 +47,7 @@ export interface IUser extends Document {
   lastName: string;
   email: string;
   password: string;
+  username?: string;
   phone?: string;
   address?: IAddress;
   role: UserRole;
@@ -123,6 +124,12 @@ const UserSchema = new Schema<IUser>(
       required: true,
       minlength: [8, 'Password must be at least 8 characters long']
     },
+    username: {
+      type: String,
+      unique: true,
+      sparse: true,
+      required: function () { return this.role === UserRole.STUDENT; }
+    },
     phone: { type: String, required: false },
     address: { type: AddressSchema, required: false },
     role: {
@@ -176,5 +183,5 @@ UserSchema.methods.comparePassword = async function (candidatePassword: string):
 };
 
 const User = mongoose.models.User || mongoose.model<IUser>('User', UserSchema);
-
+UserSchema.index({ username: 1 }, { unique: true, sparse: true });
 export default User;

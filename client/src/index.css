@@ -1,13 +1,311 @@
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap');
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
+
 @layer base {
+  :root {
+    /* Font family */
+    --font-family: 'Poppins', -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji";
+
+    /* Base colors from the provided palette */
+    --primary-base: 142 65% 47%;
+    /* #22cd4f - Green */
+    --secondary-base: 0 77% 62%;
+    /* #ea5152 - Red/Pink */
+    --accent-base: 207 94% 67%;
+    /* #5bb1fa - Blue */
+    --background-base: 0 0% 95%;
+    /* #f2f2f2 - Light background */
+
+    /* Main system colors */
+    --background: 0 0% 100%;
+    --foreground: 222.2 84% 4.9%;
+
+    --card: 0 0% 100%;
+    --card-foreground: 222.2 84% 4.9%;
+
+    --popover: 0 0% 100%;
+    --popover-foreground: 222.2 84% 4.9%;
+
+    --primary: var(--primary-base);
+    --primary-foreground: 355.7 100% 97.3%;
+
+    --secondary: var(--secondary-base);
+    --secondary-foreground: 355.7 100% 97.3%;
+
+    --accent: var(--accent-base);
+    --accent-foreground: 355.7 100% 97.3%;
+
+    --muted: 210 40% 96.1%;
+    --muted-foreground: 215.4 16.3% 46.9%;
+
+    --destructive: 0 84.2% 60.2%;
+    --destructive-foreground: 210 40% 98%;
+
+    --border: 214.3 31.8% 91.4%;
+    --input: 214.3 31.8% 91.4%;
+    --ring: var(--primary-base);
+
+    --radius: 1.5rem;
+
+    /* Chart Colors */
+    --chart-1: var(--primary-base);
+    --chart-2: var(--secondary-base);
+    --chart-3: var(--accent-base);
+    --chart-4: 213 94% 68%;
+    --chart-5: 345 82% 60%;
+  }
+
+  .dark {
+    --background: 222.2 84% 4.9%;
+    --foreground: 210 40% 98%;
+
+    --card: 222.2 84% 4.9%;
+    --card-foreground: 210 40% 98%;
+
+    --popover: 222.2 84% 4.9%;
+    --popover-foreground: 210 40% 98%;
+
+    --primary: var(--primary-base);
+    --primary-foreground: 222.2 47.4% 11.2%;
+
+    --secondary: var(--secondary-base);
+    --secondary-foreground: 210 40% 98%;
+
+    --accent: var(--accent-base);
+    --accent-foreground: 210 40% 98%;
+
+    --muted: 217.2 32.6% 17.5%;
+    --muted-foreground: 215 20.2% 65.1%;
+
+    --destructive: 0 62.8% 30.6%;
+    --destructive-foreground: 210 40% 98%;
+
+    --border: 217.2 32.6% 17.5%;
+    --input: 217.2 32.6% 17.5%;
+    --ring: var(--primary-base);
+  }
+
   * {
     @apply border-border;
   }
 
+  html,
   body {
-    @apply font-sans antialiased bg-background text-foreground;
+    font-family: var(--font-family);
+  }
+
+  body {
+    @apply antialiased bg-background text-foreground;
+    font-feature-settings: "ss01", "ss03", "cv01", "cv02";
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+
+  h1,
+  h2,
+  h3,
+  h4,
+  h5,
+  h6 {
+    font-family: var(--font-family);
+    @apply font-medium tracking-tight;
+  }
+
+  h1 {
+    @apply text-4xl md:text-5xl lg:text-6xl;
+    line-height: 1.1;
+  }
+
+  h2 {
+    @apply text-3xl md:text-4xl;
+    line-height: 1.2;
+  }
+
+  h3 {
+    @apply text-2xl;
+    line-height: 1.3;
+  }
+
+  button,
+  input,
+  select,
+  textarea {
+    font-family: var(--font-family);
+  }
+}
+
+/* Global Component Styles */
+@layer components {
+
+  /* Buttons */
+  .btn {
+    @apply rounded-full transition-all duration-200 font-medium;
+  }
+
+  .btn-primary {
+    @apply bg-primary text-primary-foreground hover:bg-primary/90;
+  }
+
+  .btn-secondary {
+    @apply bg-secondary text-secondary-foreground hover:bg-secondary/90;
+  }
+
+  .btn-accent {
+    @apply bg-accent text-accent-foreground hover:bg-accent/90;
+  }
+
+  .btn-outline {
+    @apply border border-input bg-background hover:bg-accent/10 hover:text-accent;
+  }
+
+  /* Cards */
+  .card-hover {
+    @apply transition-all duration-200 hover:shadow-lg;
+  }
+
+  .card {
+    @apply bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden transition-all duration-200 hover:shadow-md;
+  }
+
+  /* Blob shapes */
+  .blob-shape {
+    @apply absolute rounded-full opacity-80;
+  }
+
+  .blob-primary {
+    @apply bg-primary blob-shape;
+  }
+
+  .blob-secondary {
+    @apply bg-secondary blob-shape;
+  }
+
+  .blob-accent {
+    @apply bg-accent blob-shape;
+  }
+
+  /* Navigation */
+  .nav-link {
+    @apply text-foreground/80 hover:text-foreground transition-colors;
+  }
+
+  .nav-link-active {
+    @apply text-primary font-medium;
+  }
+
+  /* Headers */
+  .heading-xl {
+    @apply text-4xl md:text-5xl lg:text-6xl font-bold tracking-tight leading-tight;
+  }
+
+  .heading-lg {
+    @apply text-3xl md:text-4xl font-bold;
+  }
+
+  .heading-md {
+    @apply text-2xl font-bold;
+  }
+
+  .heading-sm {
+    @apply text-xl font-semibold;
+  }
+
+  /* Metrics display */
+  .metric-value {
+    @apply text-4xl md:text-5xl font-bold;
+  }
+
+  .metric-label {
+    @apply text-muted-foreground;
+  }
+
+  /* Feature icons */
+  .feature-icon {
+    @apply w-12 h-12 rounded-full bg-muted flex items-center justify-center;
+  }
+
+  /* Feature/info cards */
+  .feature-card {
+    @apply p-6 rounded-xl bg-white shadow-md hover:shadow-lg transition-all duration-200 border border-gray-100;
+  }
+
+  /* Decorative elements */
+  .dots-pattern {
+    @apply flex space-x-2 my-6;
+  }
+
+  /* Gradients */
+  .gradient-primary {
+    @apply bg-gradient-to-r from-primary to-primary/70;
+  }
+
+  .gradient-accent {
+    @apply bg-gradient-to-r from-accent to-accent/70;
+  }
+
+  .gradient-secondary {
+    @apply bg-gradient-to-r from-secondary to-secondary/70;
+  }
+
+  /* Forms */
+  .input-styled {
+    @apply rounded-lg border border-input bg-background px-3 py-2 text-sm ring-offset-background focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-ring;
+  }
+
+  /* Badges */
+  .badge {
+    @apply inline-flex items-center rounded-full px-2.5 py-0.5 text-xs font-medium transition-colors focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2;
+  }
+
+  .badge-primary {
+    @apply bg-primary/10 text-primary hover:bg-primary/20;
+  }
+
+  .badge-secondary {
+    @apply bg-secondary/10 text-secondary hover:bg-secondary/20;
+  }
+
+  .badge-accent {
+    @apply bg-accent/10 text-accent hover:bg-accent/20;
+  }
+
+  /* Typography styles */
+  .text-display {
+    @apply text-4xl md:text-5xl lg:text-6xl font-semibold tracking-tight;
+    letter-spacing: -0.02em;
+  }
+
+  .text-heading-1 {
+    @apply text-3xl md:text-4xl font-semibold tracking-tight;
+    letter-spacing: -0.01em;
+  }
+
+  .text-heading-2 {
+    @apply text-2xl md:text-3xl font-semibold;
+    letter-spacing: -0.01em;
+  }
+
+  .text-heading-3 {
+    @apply text-xl md:text-2xl font-medium;
+  }
+
+  .text-body-large {
+    @apply text-lg leading-relaxed;
+  }
+
+  .text-body {
+    @apply text-base leading-relaxed;
+  }
+
+  .text-body-small {
+    @apply text-sm leading-relaxed;
+  }
+
+  .text-caption {
+    @apply text-xs text-muted-foreground;
   }
 }

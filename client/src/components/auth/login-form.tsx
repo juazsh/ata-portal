@@ -39,13 +39,13 @@ export function LoginForm() {
           name="email"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Email address</FormLabel>
+              <FormLabel>Enter email or username</FormLabel>
               <FormControl>
                 <Input
-                  type="email"
-                  placeholder="your@email.com"
+                  type="text"
+                  placeholder="email@example.com or username"
                   {...field}
-                  autoComplete="email"
+                  autoComplete="username email"
                   className="bg-slate-50 dark:bg-slate-800"
                 />
               </FormControl>
@@ -97,7 +97,7 @@ export function LoginForm() {
 
         <Button
           type="submit"
-          className="w-full bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700"
+          className="w-full"
           disabled={loginMutation.isPending}
         >
           {loginMutation.isPending ? "Signing in..." : "Sign in"}

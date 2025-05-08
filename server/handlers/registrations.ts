@@ -106,7 +106,6 @@ export const getRegistrationById = async (req: Request, res: Response) => {
 export const verifyRegistration = async (req: Request, res: Response) => {
   try {
     const { registrationId } = req.params;
-    const updateData = req.body;
 
     if (!mongoose.Types.ObjectId.isValid(registrationId)) {
       return res.status(400).json({
@@ -114,7 +113,9 @@ export const verifyRegistration = async (req: Request, res: Response) => {
       });
     }
 
-    const registration = await Registration.findById(registrationId);
+    const registration = await Registration.findById(registrationId)
+      .populate('programId', 'name price')
+      .populate('offeringId', 'name description');
 
     if (!registration) {
       return res.status(404).json({
@@ -122,20 +123,16 @@ export const verifyRegistration = async (req: Request, res: Response) => {
       });
     }
 
-    if (Object.keys(updateData).length > 0) {
-      const updatedRegistration = await Registration.findByIdAndUpdate(
-        registrationId,
-        updateData,
-        { new: true, runValidators: true }
-      );
-      return res.status(200).json({
-        message: "Registration verified and updated",
-        registration: updatedRegistration
+    if (registration.isRegistrationComplete || registration.isRegLinkedWithEnrollment || registration.isUserSetup) {
+      return res.status(400).json({
+        message: "Link expired or account already created for this registration ID",
+        isValid: false
       });
     }
 
     res.status(200).json({
-      message: "Registration verified",
+      message: "Registration is valid",
+      isValid: true,
       registration: registration
     });
   } catch (error) {

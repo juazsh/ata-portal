@@ -26,9 +26,9 @@ export const insertUserSchema = z.object({
 });
 
 export const loginUserSchema = z.object({
-  email: z.string().email("Invalid email format"),
-  password: z.string().min(6, "Password must be at least 6 characters"),
-});
+  email: z.string().min(3, "Email or username must be at least 3 characters"),
+  password: z.string().min(1, "Password is required")
+})
 
 export type InsertUser = z.infer<typeof insertUserSchema>;
 export type LoginUser = z.infer<typeof loginUserSchema>;
