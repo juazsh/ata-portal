@@ -34,6 +34,9 @@ function Router() {
       <ProtectedRoute path="/programs" component={Dashboard} />
       <ProtectedRoute path="/add-teacher" component={Dashboard} />
       <ProtectedRoute path="/add-student" component={Dashboard} />
+      <ProtectedRoute path="/class-sessions" component={Dashboard} />
+      <ProtectedRoute path="/discount-codes" component={Dashboard} />
+
 
       <Route component={NotFound} />
     </Switch>

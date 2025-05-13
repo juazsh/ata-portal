@@ -73,8 +73,12 @@ export function StudentInfoForm({ formData, handleChange, setActiveTab }: Studen
         <Button type="button" variant="outline" onClick={() => setActiveTab("parent")}>
           Back to Parent Info
         </Button>
-        <Button type="button" onClick={() => setActiveTab("payment")} disabled={!isStudentInfoComplete()}>
-          Continue to Payment
+        <Button
+          type="button"
+          onClick={() => setActiveTab("sessions")}
+          disabled={!isStudentInfoComplete()}
+        >
+          Continue to Class Sessions
         </Button>
       </div>
     </div>

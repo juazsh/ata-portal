@@ -87,6 +87,13 @@ import {
   deleteDemoRegistration
 } from "./handlers/demo-registrations";
 import { createPortalAccount } from "./handlers/portal-account";
+import {
+  addClassSession,
+  getAllClassSessions,
+  getClassSessionById,
+  updateClassSession,
+  deleteClassSession
+} from "./handlers/class-sessions";
 
 export async function registerRoutes(app: Express): Promise<Server> {
 
@@ -148,7 +155,36 @@ export async function registerRoutes(app: Express): Promise<Server> {
     hasRole([UserRole.ADMIN, UserRole.OWNER]),
     deleteDemoRegistration
   );
+  app.get(
+    "/api/class-sessions",
+    getAllClassSessions
+  );
 
+  app.get(
+    "/api/class-sessions/:sessionId",
+    getClassSessionById
+  );
+
+  app.post(
+    "/api/class-sessions",
+    isAuthenticated,
+    hasRole([UserRole.ADMIN, UserRole.OWNER]),
+    addClassSession
+  );
+
+  app.put(
+    "/api/class-sessions/:sessionId",
+    isAuthenticated,
+    hasRole([UserRole.ADMIN, UserRole.OWNER]),
+    updateClassSession
+  );
+
+  app.delete(
+    "/api/class-sessions/:sessionId",
+    isAuthenticated,
+    hasRole([UserRole.ADMIN, UserRole.OWNER]),
+    deleteClassSession
+  );
   app.get("/api/users", isAuthenticated, hasRole([UserRole.ADMIN]), async (req, res) => {
     try {
       const users = await User.find().select("-password");

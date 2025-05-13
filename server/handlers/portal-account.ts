@@ -8,14 +8,13 @@ import { ProgramProgress, ModuleProgress } from "../models/student-progress";
 import { sendMail } from "../services/email";
 import { getPortalAccountEmailTemplate } from "../utils/portal-account-email-templates";
 
-// Helper function to generate username
+
 async function generateUsername(firstName: string, lastName: string): Promise<string> {
-  // Take first 3 letters of first name and last name
+
   const firstPart = firstName.slice(0, 3).toLowerCase();
   const lastPart = lastName.slice(0, 3).toLowerCase();
   let baseUsername = firstPart + lastPart;
 
-  // Check if username exists and add numbers if needed
   let counter = 0;
   let username = baseUsername;
 

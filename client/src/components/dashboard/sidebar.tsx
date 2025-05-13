@@ -16,7 +16,8 @@ import {
   PhoneIcon,
   MapPinIcon,
   BarChartIcon,
-  CalendarIcon
+  CalendarIcon,
+  icons
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { Button } from "@/components/ui/button";
@@ -199,6 +200,16 @@ export function Sidebar({ isOpen, setIsOpen }: SidebarProps) {
           name: "Students",
           icon: GraduationCapIcon,
           path: "/students",
+        },
+        {
+          name: "Discounts Codes",
+          icon: FileTextIcon,
+          path: "/discount-codes",
+        },
+        {
+          name: "Manage Sessions",
+          icon: BookIcon,
+          path: "/class-sessions",
         },
         {
           name: "Parents",

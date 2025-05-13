@@ -44,6 +44,7 @@ import { useToast } from "@/hooks/use-toast";
 import { is } from "drizzle-orm";
 import { userInfo } from "os";
 import { StudentManagement } from "@/components/dashboard/student-management";
+import ClassSessionsPage from "@/components/class-session/class-session-page";
 
 function getAuthHeaders() {
   const token = localStorage.getItem('auth_token');
@@ -79,7 +80,9 @@ export default function Dashboard() {
   const [isAddTeacherMatch] = useRoute("/add-teacher");
   const [isAddStudentMatch] = useRoute("/add-student");
   const [isAddLocationMatch] = useRoute("/add-location");
+  const [isDiscountCode] = useRoute("/discount-codes");
   const [isProgramsMatch] = useRoute("/programs");
+  const [isClassSessions] = useRoute("/class-sessions");
 
   return (
     <div className="min-h-screen flex flex-col md:flex-row bg-white dark:bg-slate-950">
@@ -99,6 +102,8 @@ export default function Dashboard() {
         {isClassesMatch && <ClassesPage />}
         {isAddTeacherMatch && <AddTeacherPage />}
         {isAddStudentMatch && <AddStudentPage />}
+        {isClassSessions && <ClassSessionsPage />}
+
 
         {!isRootMatch &&
           !isStudentsMatch &&
@@ -106,6 +111,7 @@ export default function Dashboard() {
           !isPaymentInfoMatch &&
           !isTransactionHistoryMatch &&
           !isProgramsMatch &&
+          !isClassSessions &&
           !isAccountInfoMatch &&
           !isContactMatch &&
           !isProgressMatch &&

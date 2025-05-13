@@ -16,8 +16,21 @@ import { EnrollmentDetails } from "@/components/enrollment/enrollment-details"
 import { ParentInfoForm } from "@/components/enrollment/parent-info-form"
 import { StudentInfoForm } from "@/components/enrollment/student-info-form"
 import { PaymentForm } from "@/components/enrollment/payment-form"
+import ClassSessionCalendar from "@/components/class-session-calendar"
 import type { Program, FormData } from "@/components/enrollment/enrollment-types"
-import { InfoIcon, UserIcon, GraduationCapIcon, CreditCardIcon } from "lucide-react"
+import { InfoIcon, UserIcon, GraduationCapIcon, CalendarIcon, CreditCardIcon } from "lucide-react"
+
+// Add interface for ClassSession
+interface ClassSession {
+  id: string;
+  program_id?: string;
+  weekday: string;
+  start_time: string;
+  end_time: string;
+  type: "weekday" | "weekend";
+  regular_capacity: number;
+  capacity_demo: number;
+}
 
 const FinalizeEnrollment = () => {
   const params = useParams<{ pid: string }>()
@@ -54,6 +67,9 @@ const FinalizeEnrollment = () => {
     cardCVC: "",
     enrollmentDate: undefined,
   })
+
+  // Add state for selected sessions
+  const [selectedSessions, setSelectedSessions] = useState<ClassSession[]>([])
 
   const [isLoading, setIsLoading] = useState(false)
   const [isProgramLoading, setIsProgramLoading] = useState(true)
@@ -134,6 +150,13 @@ const FinalizeEnrollment = () => {
         return
       }
 
+      // Check if sessions are selected
+      if (selectedSessions.length === 0) {
+        setError("Please select at least one class session")
+        setIsLoading(false)
+        return
+      }
+
       // Calculate payment amounts
       const firstPaymentAmount = getFirstPaymentAmount()
       const adminFee = getAdminFee()
@@ -157,6 +180,9 @@ const FinalizeEnrollment = () => {
         programId: program._id,
         offeringId: program.offering._id,
         enrollmentDate: formData.enrollmentDate.toISOString(),
+
+        // Class Sessions Information
+        classSessions: selectedSessions,
 
         // Payment Information
         paymentMethod: formData.paymentMethod,
@@ -219,6 +245,16 @@ const FinalizeEnrollment = () => {
       formData.childLastName.trim() !== "" &&
       formData.childDOB.trim() !== ""
     )
+  }
+
+  const isSessionSelectionComplete = () => {
+    if (!program) return false
+
+    const isMarathon = program.offering.name.includes("Marathon")
+    if (!isMarathon) return selectedSessions.length === 1
+
+    const isTwiceAWeek = program.name.toLowerCase().includes("twice")
+    return isTwiceAWeek ? selectedSessions.length === 2 : selectedSessions.length === 1
   }
 
   const getAttendanceLimit = () => {
@@ -322,7 +358,9 @@ const FinalizeEnrollment = () => {
                     if (
                       value === "details" ||
                       (value === "parent" && isValidDate(formData.enrollmentDate)) ||
-                      (value === "child" && isParentInfoComplete())
+                      (value === "child" && isParentInfoComplete()) ||
+                      (value === "sessions" && isStudentInfoComplete()) ||
+                      (value === "payment" && isSessionSelectionComplete())
                     ) {
                       setActiveTab(value)
                       return
@@ -346,10 +384,19 @@ const FinalizeEnrollment = () => {
                       return
                     }
 
-                    if (value === "payment" && !isStudentInfoComplete()) {
+                    if (value === "sessions" && !isStudentInfoComplete()) {
                       toast({
                         title: "Incomplete information",
                         description: "Please complete all required student information",
+                        variant: "destructive",
+                      })
+                      return
+                    }
+
+                    if (value === "payment" && !isSessionSelectionComplete()) {
+                      toast({
+                        title: "Incomplete information",
+                        description: "Please select all required class sessions",
                         variant: "destructive",
                       })
                       return
@@ -359,7 +406,7 @@ const FinalizeEnrollment = () => {
                   }}
                   className="w-full"
                 >
-                  <TabsList className="grid grid-cols-4 mb-8">
+                  <TabsList className="grid grid-cols-5 mb-8">
                     <TabsTrigger
                       value="details"
                       className="flex items-center gap-2 data-[state=active]:bg-black data-[state=active]:text-white"
@@ -384,9 +431,17 @@ const FinalizeEnrollment = () => {
                       <span className="hidden sm:inline">Student Info</span>
                     </TabsTrigger>
                     <TabsTrigger
-                      value="payment"
+                      value="sessions"
                       className="flex items-center gap-2 data-[state=active]:bg-black data-[state=active]:text-white"
                       disabled={!isStudentInfoComplete()}
+                    >
+                      <CalendarIcon className="h-4 w-4" />
+                      <span className="hidden sm:inline">Class Sessions</span>
+                    </TabsTrigger>
+                    <TabsTrigger
+                      value="payment"
+                      className="flex items-center gap-2 data-[state=active]:bg-black data-[state=active]:text-white"
+                      disabled={!isSessionSelectionComplete()}
                     >
                       <CreditCardIcon className="h-4 w-4" />
                       <span className="hidden sm:inline">Payment</span>
@@ -412,6 +467,16 @@ const FinalizeEnrollment = () => {
 
                   <TabsContent value="child" className="space-y-6">
                     <StudentInfoForm formData={formData} handleChange={handleChange} setActiveTab={setActiveTab} />
+                  </TabsContent>
+
+                  <TabsContent value="sessions" className="space-y-6">
+                    <ClassSessionCalendar
+                      program={program}
+                      isProgramLoading={isProgramLoading}
+                      selectedSessions={selectedSessions}
+                      setSelectedSessions={setSelectedSessions}
+                      setActiveTab={setActiveTab}
+                    />
                   </TabsContent>
 
                   <TabsContent value="payment" className="space-y-6">
