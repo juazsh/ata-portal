@@ -15,7 +15,7 @@ const corsOptions = {
   origin: ['https://stem-masters.org'],
   methods: ['GET', 'POST'], //, 'PUT', 'DELETE', 'OPTIONS'],
   allowedHeaders: ['Content-Type', 'Authorization'],
-  credentials: true
+  credentials: false
 };
 
 // Apply CORS to all routes
