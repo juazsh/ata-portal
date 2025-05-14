@@ -316,6 +316,7 @@ export const deleteProgram = async (req: Request, res: Response) => {
 
 export const getProgramsByOfferingType = async (req: Request, res: Response) => {
   try {
+    console.log("Fetching programs by offering type");
     const { name } = req.params;
 
     if (!['Marathon', 'Sprint'].includes(name)) {
