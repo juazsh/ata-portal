@@ -630,17 +630,17 @@ function PaymentInfoPage() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-2 gap-4 mb-4">
+            <div className="grid grid-cols-1 mb-4">
               <div className="p-4 bg-slate-50 dark:bg-slate-800 rounded-md">
                 <h3 className="text-sm font-medium text-slate-500 dark:text-slate-400">Outstanding</h3>
                 <p className="text-xl font-semibold mb-2">$350.00</p>
                 <Button size="sm" className="w-full">Make Payment</Button>
               </div>
-              <div className="p-4 bg-slate-50 dark:bg-slate-800 rounded-md">
+              {/* <div className="p-4 bg-slate-50 dark:bg-slate-800 rounded-md">
                 <h3 className="text-sm font-medium text-slate-500 dark:text-slate-400">Credit</h3>
                 <p className="text-xl font-semibold mb-2">$50.00</p>
                 <Button size="sm" variant="outline" className="w-full">Add Credit</Button>
-              </div>
+              </div> */}
             </div>
 
             <div className="mb-4">

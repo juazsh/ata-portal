@@ -70,11 +70,11 @@ export function Sidebar({ isOpen, setIsOpen }: SidebarProps) {
           icon: FileTextIcon,
           path: "/payment-info",
         },
-        {
-          name: "Programs",
-          icon: BookIcon,
-          path: "/programs",
-        },
+        // {
+        //   name: "Programs",
+        //   icon: BookIcon,
+        //   path: "/programs",
+        // },
         {
           name: "divider-1",
           isDivider: true,

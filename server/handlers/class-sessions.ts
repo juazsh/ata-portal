@@ -4,19 +4,46 @@ import { Program } from "../models/program";
 import mongoose from "mongoose";
 import { v4 as uuidv4 } from "uuid";
 
+export const updateSessionCapacity = async (sessionId: string, isDemo: boolean = false): Promise<boolean> => {
+  try {
+    const session = await ClassSession.findOne({ id: sessionId });
+
+    if (!session) {
+      return false;
+    }
+
+    if (isDemo) {
+
+      if (session.available_demo_capacity > 0) {
+        session.available_demo_capacity -= 1;
+        await session.save();
+        return true;
+      }
+    } else {
+
+      if (session.available_capacity > 0) {
+        session.available_capacity -= 1;
+        await session.save();
+        return true;
+      }
+    }
+
+    return false;
+  } catch (error) {
+    console.error("Error updating session capacity:", error);
+    return false;
+  }
+};
 
 export const getAllClassSessions = async (req: Request, res: Response) => {
   try {
     const { program_id } = req.query;
 
-
     let query = {};
-
 
     if (program_id && mongoose.Types.ObjectId.isValid(program_id as string)) {
       query = { program_id: program_id };
     }
-
 
     const sessions = await ClassSession.find(query)
       .populate("program_id", "name")
@@ -34,7 +61,6 @@ export const getAllClassSessions = async (req: Request, res: Response) => {
     });
   }
 };
-
 
 export const getClassSessionById = async (req: Request, res: Response) => {
   try {
@@ -57,7 +83,6 @@ export const getClassSessionById = async (req: Request, res: Response) => {
   }
 };
 
-
 export const addClassSession = async (req: Request, res: Response) => {
   try {
     const {
@@ -66,18 +91,16 @@ export const addClassSession = async (req: Request, res: Response) => {
       start_time,
       end_time,
       type,
-      regular_capacity,
-      capacity_demo
+      total_capacity,
+      total_demo_capacity
     } = req.body;
 
-
     if (!weekday || !start_time || !end_time || !type ||
-      regular_capacity === undefined || capacity_demo === undefined) {
+      total_capacity === undefined || total_demo_capacity === undefined) {
       return res.status(400).json({
-        message: "Missing required fields: weekday, start_time, end_time, type, regular_capacity, capacity_demo"
+        message: "Missing required fields: weekday, start_time, end_time, type, total_capacity, total_demo_capacity"
       });
     }
-
 
     const validWeekdays = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
     if (!validWeekdays.includes(weekday)) {
@@ -86,7 +109,6 @@ export const addClassSession = async (req: Request, res: Response) => {
       });
     }
 
-
     const timeRegex = /^([0-1]?[0-9]|2[0-3]):[0-5][0-9]$/;
     if (!timeRegex.test(start_time) || !timeRegex.test(end_time)) {
       return res.status(400).json({
@@ -94,21 +116,18 @@ export const addClassSession = async (req: Request, res: Response) => {
       });
     }
 
-
     if (type !== "weekday" && type !== "weekend") {
       return res.status(400).json({
         message: "Invalid type. Must be either 'weekday' or 'weekend'"
       });
     }
 
-
-    if (regular_capacity < 0 || capacity_demo < 0) {
+    if (total_capacity < 0 || total_demo_capacity < 0) {
       return res.status(400).json({
         message: "Capacities must be positive numbers"
       });
     }
 
-    // If program_id is provided, check if it exists
     if (program_id && mongoose.Types.ObjectId.isValid(program_id)) {
       const programExists = await Program.findById(program_id);
       if (!programExists) {
@@ -117,7 +136,6 @@ export const addClassSession = async (req: Request, res: Response) => {
         });
       }
     }
-
 
     const sessionId = uuidv4();
 
@@ -128,8 +146,10 @@ export const addClassSession = async (req: Request, res: Response) => {
       start_time,
       end_time,
       type,
-      regular_capacity,
-      capacity_demo
+      total_capacity,
+      available_capacity: total_capacity,
+      total_demo_capacity,
+      available_demo_capacity: total_demo_capacity
     });
 
     const savedSession = await newSession.save();
@@ -140,7 +160,6 @@ export const addClassSession = async (req: Request, res: Response) => {
     res.status(201).json(populatedSession);
   } catch (error) {
     console.error("Error adding class session:", error);
-
 
     if (error.code === 11000) {
       return res.status(409).json({
@@ -162,18 +181,15 @@ export const addClassSession = async (req: Request, res: Response) => {
   }
 };
 
-
 export const updateClassSession = async (req: Request, res: Response) => {
   try {
     const { sessionId } = req.params;
     const updateData = req.body;
 
-
     const session = await ClassSession.findOne({ id: sessionId });
     if (!session) {
       return res.status(404).json({ message: "Class session not found" });
     }
-
 
     if (updateData.program_id && mongoose.Types.ObjectId.isValid(updateData.program_id)) {
       const programExists = await Program.findById(updateData.program_id);
@@ -215,18 +231,34 @@ export const updateClassSession = async (req: Request, res: Response) => {
       });
     }
 
-    if (updateData.regular_capacity !== undefined && updateData.regular_capacity < 0) {
-      return res.status(400).json({
-        message: "Regular capacity must be a positive number"
-      });
+
+    if (updateData.total_capacity !== undefined) {
+      if (updateData.total_capacity < 0) {
+        return res.status(400).json({
+          message: "Total capacity must be a positive number"
+        });
+      }
+
+
+      const capacityDifference = updateData.total_capacity - session.total_capacity;
+
+
+      updateData.available_capacity = Math.max(0, session.available_capacity + capacityDifference);
     }
 
-    if (updateData.capacity_demo !== undefined && updateData.capacity_demo < 0) {
-      return res.status(400).json({
-        message: "Demo capacity must be a positive number"
-      });
-    }
+    if (updateData.total_demo_capacity !== undefined) {
+      if (updateData.total_demo_capacity < 0) {
+        return res.status(400).json({
+          message: "Demo capacity must be a positive number"
+        });
+      }
 
+
+      const demoCapacityDifference = updateData.total_demo_capacity - session.total_demo_capacity;
+
+
+      updateData.available_demo_capacity = Math.max(0, session.available_demo_capacity + demoCapacityDifference);
+    }
 
     const updatedSession = await ClassSession.findOneAndUpdate(
       { id: sessionId },
@@ -237,7 +269,6 @@ export const updateClassSession = async (req: Request, res: Response) => {
     res.status(200).json(updatedSession);
   } catch (error) {
     console.error("Error updating class session:", error);
-
 
     if (error.code === 11000) {
       return res.status(409).json({

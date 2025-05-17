@@ -11,6 +11,7 @@ export interface IEnrollment extends Document {
   offeringType: 'Marathon' | 'Sprint';
   paymentMethod: string;
   paymentStatus: string;
+  classSessions: string[];
   monthlyAmount?: number;
   subscriptionId?: string;
   nextPaymentDue?: Date;
@@ -62,6 +63,10 @@ const EnrollmentSchema = new Schema<IEnrollment>(
       enum: ['pending', 'completed', 'failed', 'refunded', 'active', 'cancelled'],
       default: 'pending'
     },
+    classSessions: [{
+      type: String,
+      required: true
+    }],
 
     // >> For Marathon (subscription)
     monthlyAmount: {

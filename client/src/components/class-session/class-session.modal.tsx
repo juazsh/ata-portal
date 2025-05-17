@@ -24,8 +24,10 @@ export function ClassSessionModal({ open, onOpenChange, currentSession, programs
     start_time: "",
     end_time: "",
     type: "",
-    regular_capacity: 0,
-    capacity_demo: 0,
+    total_capacity: 0,          // Changed from regular_capacity to total_capacity
+    available_capacity: 0,      // Added available_capacity
+    total_demo_capacity: 0,     // Changed from capacity_demo to total_demo_capacity
+    available_demo_capacity: 0, // Added available_demo_capacity
   })
   const [isSubmitting, setIsSubmitting] = useState(false)
 
@@ -39,8 +41,11 @@ export function ClassSessionModal({ open, onOpenChange, currentSession, programs
         start_time: currentSession.start_time,
         end_time: currentSession.end_time,
         type: currentSession.type,
-        regular_capacity: currentSession.regular_capacity,
-        capacity_demo: currentSession.capacity_demo,
+        // Handle both old and new field names for backward compatibility during transition
+        total_capacity: currentSession.total_capacity || currentSession.regular_capacity || 0,
+        available_capacity: currentSession.available_capacity || currentSession.total_capacity || currentSession.regular_capacity || 0,
+        total_demo_capacity: currentSession.total_demo_capacity || currentSession.capacity_demo || 0,
+        available_demo_capacity: currentSession.available_demo_capacity || currentSession.total_demo_capacity || currentSession.capacity_demo || 0,
       })
     } else {
       resetForm()
@@ -54,17 +59,45 @@ export function ClassSessionModal({ open, onOpenChange, currentSession, programs
       start_time: "",
       end_time: "",
       type: "",
-      regular_capacity: 0,
-      capacity_demo: 0,
+      total_capacity: 0,
+      available_capacity: 0,
+      total_demo_capacity: 0,
+      available_demo_capacity: 0,
     })
   }
 
   const handleInputChange = (e) => {
     const { name, value } = e.target
-    setFormData((prev) => ({
-      ...prev,
-      [name]: name === "regular_capacity" || name === "capacity_demo" ? Number.parseInt(value) : value,
-    }))
+    const numValue = name.includes("capacity") ? Number.parseInt(value) : value
+
+    setFormData((prev) => {
+      const newState = {
+        ...prev,
+        [name]: numValue,
+      }
+
+      // Auto-update available capacity when total capacity changes
+      if (name === "total_capacity") {
+        // If editing an existing session, preserve difference between total and available
+        const diff = currentSession
+          ? Math.max(0, (currentSession.total_capacity || currentSession.regular_capacity) -
+            (currentSession.available_capacity || currentSession.total_capacity || currentSession.regular_capacity))
+          : 0
+        newState.available_capacity = Math.max(0, Number(value) - diff)
+      }
+
+      // Auto-update available demo capacity when total demo capacity changes
+      if (name === "total_demo_capacity") {
+        // If editing an existing session, preserve difference between total and available
+        const diff = currentSession
+          ? Math.max(0, (currentSession.total_demo_capacity || currentSession.capacity_demo) -
+            (currentSession.available_demo_capacity || currentSession.total_demo_capacity || currentSession.capacity_demo))
+          : 0
+        newState.available_demo_capacity = Math.max(0, Number(value) - diff)
+      }
+
+      return newState
+    })
   }
 
   const handleSelectChange = (name, value) => {
@@ -90,7 +123,10 @@ export function ClassSessionModal({ open, onOpenChange, currentSession, programs
         ...formData,
         program_id: formData.program_id === "none" ? "" : formData.program_id,
         weekday: formData.weekday === "select-weekday" ? "" : formData.weekday,
-        type: formData.type === "select-type" ? "" : formData.type
+        type: formData.type === "select-type" ? "" : formData.type,
+        // For new sessions, available capacity equals total capacity initially
+        available_capacity: currentSession ? formData.available_capacity : formData.total_capacity,
+        available_demo_capacity: currentSession ? formData.available_demo_capacity : formData.total_demo_capacity
       };
 
       const url = currentSession ? `/api/class-sessions/${currentSession.id}` : "/api/class-sessions"
@@ -242,31 +278,45 @@ export function ClassSessionModal({ open, onOpenChange, currentSession, programs
 
           <div className="grid grid-cols-2 gap-4">
             <div className="grid w-full items-center gap-2">
-              <Label htmlFor="regular_capacity">Regular Capacity*</Label>
+              <Label htmlFor="total_capacity">Total Capacity*</Label>
               <Input
-                id="regular_capacity"
-                name="regular_capacity"
+                id="total_capacity"
+                name="total_capacity"
                 type="number"
-                value={formData.regular_capacity}
+                value={formData.total_capacity}
                 onChange={handleInputChange}
                 required
                 min="0"
               />
+              <p className="text-xs text-slate-500">
+                Available: {formData.available_capacity} {currentSession && "(Set automatically for new sessions)"}
+              </p>
             </div>
 
             <div className="grid w-full items-center gap-2">
-              <Label htmlFor="capacity_demo">Demo Capacity*</Label>
+              <Label htmlFor="total_demo_capacity">Demo Capacity*</Label>
               <Input
-                id="capacity_demo"
-                name="capacity_demo"
+                id="total_demo_capacity"
+                name="total_demo_capacity"
                 type="number"
-                value={formData.capacity_demo}
+                value={formData.total_demo_capacity}
                 onChange={handleInputChange}
                 required
                 min="0"
               />
+              <p className="text-xs text-slate-500">
+                Available: {formData.available_demo_capacity} {currentSession && "(Set automatically for new sessions)"}
+              </p>
             </div>
           </div>
+
+          {currentSession && (
+            <div className="p-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-md">
+              <p className="text-sm text-amber-800 dark:text-amber-300">
+                <strong>Note:</strong> When editing a session, the available capacity fields will be adjusted automatically based on your changes to total capacity.
+              </p>
+            </div>
+          )}
 
           <DialogFooter className="mt-6">
             <Button type="button" variant="outline" onClick={() => onOpenChange(false)} disabled={isSubmitting}>
@@ -282,8 +332,8 @@ export function ClassSessionModal({ open, onOpenChange, currentSession, programs
                 !formData.end_time ||
                 !formData.type ||
                 formData.type === "select-type" ||
-                formData.regular_capacity < 0 ||
-                formData.capacity_demo < 0
+                formData.total_capacity < 0 ||
+                formData.total_demo_capacity < 0
               }
             >
               {isSubmitting ? (

@@ -4,11 +4,11 @@ import mongoose from "mongoose";
 import { sendMail } from "./../services/email";
 import { generateInvoicePDF } from "../utils/pdf-generator";
 import { getRegistrationEmailTemplate } from "../utils/email-templates";
+import User, { UserRole } from "../models/user";
 
 export const createRegistration = async (req: Request, res: Response) => {
   try {
     const registrationData = req.body;
-
 
     const requiredFields = [
       'parentFirstName', 'parentLastName', 'parentEmail', 'parentPhone',
@@ -25,6 +25,13 @@ export const createRegistration = async (req: Request, res: Response) => {
       }
     }
 
+    // Check if user with the provided email already exists
+    const existingUser = await User.findOne({ email: registrationData.parentEmail });
+    if (existingUser) {
+      return res.status(409).json({
+        message: "User with this email already exists"
+      });
+    }
 
     if (!mongoose.Types.ObjectId.isValid(registrationData.programId) ||
       !mongoose.Types.ObjectId.isValid(registrationData.offeringId)) {
@@ -36,9 +43,7 @@ export const createRegistration = async (req: Request, res: Response) => {
     const newRegistration = new Registration(registrationData);
     const savedRegistration = await newRegistration.save();
 
-
     const pdfBuffer = await generateInvoicePDF(savedRegistration);
-
 
     const emailHtml = getRegistrationEmailTemplate({
       parentFirstName: savedRegistration.parentFirstName,
@@ -48,7 +53,6 @@ export const createRegistration = async (req: Request, res: Response) => {
       registrationId: savedRegistration._id.toString(),
       parentEmail: savedRegistration.parentEmail
     });
-
 
     await sendMail({
       to: savedRegistration.parentEmail,

@@ -9,9 +9,25 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog"
-import { CheckCircle, AlertCircle } from "lucide-react"
+import { CheckCircle, AlertCircle, CalendarIcon, AlertTriangle } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import logoImage from "@/assets/images/new_logo.png"
+import { Badge } from "@/components/ui/badge"
+import { Progress } from "@/components/ui/progress"
+
+// Updated ClassSession interface with capacity fields
+interface ClassSession {
+  id: string;
+  program_id?: string;
+  weekday: string;
+  start_time: string;
+  end_time: string;
+  type: "weekday" | "weekend";
+  total_capacity: number;
+  available_capacity: number;
+  total_demo_capacity: number;
+  available_demo_capacity: number;
+}
 
 interface PortalAccountFormData {
   password: string
@@ -22,6 +38,7 @@ interface PortalAccountFormData {
   state: string
   zipCode: string
   country: string
+  selectedSessions: ClassSession[]
 }
 
 const US_STATES = [
@@ -96,8 +113,14 @@ const PortalEntryForm = () => {
     city: "",
     state: "",
     zipCode: "",
-    country: "United States"
+    country: "United States",
+    selectedSessions: []
   })
+
+  // Add state for available class sessions
+  const [availableSessions, setAvailableSessions] = useState<ClassSession[]>([])
+  const [sessionLoading, setSessionLoading] = useState(false)
+  const [selectedDays, setSelectedDays] = useState<Set<string>>(new Set())
 
   useEffect(() => {
     const verifyRegistrationId = async () => {
@@ -122,6 +145,11 @@ const PortalEntryForm = () => {
         }
 
         setRegistrationData(registration)
+
+        // After getting registration, fetch available sessions
+        if (registration.programId) {
+          fetchAvailableSessions(registration.programId)
+        }
       } catch (error) {
         console.error("Verification error:", error)
         setErrorMessage("Failed to verify registration. Please try again.")
@@ -135,6 +163,116 @@ const PortalEntryForm = () => {
       verifyRegistrationId()
     }
   }, [params.rid])
+
+  // Fetch available class sessions based on the program
+  const fetchAvailableSessions = async (programId: string) => {
+    setSessionLoading(true)
+    try {
+      const response = await fetch(`/api/class-sessions?program_id=${programId}`)
+
+      if (!response.ok) {
+        throw new Error("Failed to fetch class sessions")
+      }
+
+      const data = await response.json()
+      setAvailableSessions(data.sessions || [])
+    } catch (error) {
+      console.error("Error fetching class sessions:", error)
+      toast({
+        title: "Error",
+        description: "Unable to load available class sessions. Please try again later.",
+        variant: "destructive",
+      })
+    } finally {
+      setSessionLoading(false)
+    }
+  }
+
+  // Check if a session is at capacity
+  const isSessionAtCapacity = (session: ClassSession) => {
+    return session.available_capacity <= 0
+  }
+
+  // Handle session selection
+  const handleSessionSelection = (session: ClassSession) => {
+    // If session is at capacity, don't allow selection
+    if (isSessionAtCapacity(session)) {
+      toast({
+        title: "Session Unavailable",
+        description: "This session has reached its capacity. Please select another session.",
+        variant: "destructive",
+      })
+      return
+    }
+
+    // Check if session is already selected
+    const isSelected = formData.selectedSessions.some(s => s.id === session.id)
+
+    if (isSelected) {
+      // Remove from selection
+      const newSessions = formData.selectedSessions.filter(s => s.id !== session.id)
+      setFormData(prev => ({
+        ...prev,
+        selectedSessions: newSessions
+      }))
+
+      // Update selected days
+      const newDays = new Set(selectedDays)
+      newDays.delete(session.weekday)
+      setSelectedDays(newDays)
+    } else {
+      // Check if we can add this day (only one session per day)
+      if (selectedDays.has(session.weekday)) {
+        toast({
+          title: "Same Day Selection",
+          description: "You cannot select multiple sessions on the same day. Please select a session on a different day.",
+          variant: "warning",
+        })
+        return
+      }
+
+      // Determine if we can add more sessions (limit based on program type)
+      const isTwiceAWeek = registrationData?.programName?.toLowerCase().includes("twice")
+      const maxSessions = isTwiceAWeek ? 2 : 1
+
+      if (formData.selectedSessions.length >= maxSessions) {
+        // Replace the first selected session if we already have max sessions
+        toast({
+          title: "Session Selection Limited",
+          description: `You can only select ${maxSessions} session(s) for this program.`,
+          variant: "default",
+        })
+
+        // Remove the first session and its day
+        const oldSession = formData.selectedSessions[0]
+        const newSessions = [...formData.selectedSessions.slice(1), session]
+
+        setFormData(prev => ({
+          ...prev,
+          selectedSessions: newSessions
+        }))
+
+        // Update selected days
+        const newDays = new Set(selectedDays)
+        if (oldSession) {
+          newDays.delete(oldSession.weekday)
+        }
+        newDays.add(session.weekday)
+        setSelectedDays(newDays)
+      } else {
+        // Add to selection
+        setFormData(prev => ({
+          ...prev,
+          selectedSessions: [...prev.selectedSessions, session]
+        }))
+
+        // Add the day to selected days
+        const newDays = new Set(selectedDays)
+        newDays.add(session.weekday)
+        setSelectedDays(newDays)
+      }
+    }
+  }
 
   const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target
@@ -154,6 +292,10 @@ const PortalEntryForm = () => {
   }
 
   const isFormValid = () => {
+    // Determine required number of sessions based on program type
+    const isTwiceAWeek = registrationData?.programName?.toLowerCase().includes("twice")
+    const requiredSessionCount = isTwiceAWeek ? 2 : 1
+
     return (
       formData.password.trim() !== "" &&
       isPasswordValid(formData.password) &&
@@ -163,17 +305,22 @@ const PortalEntryForm = () => {
       formData.state.trim() !== "" &&
       formData.zipCode.trim() !== "" &&
       formData.country.trim() !== "" &&
-      /^\d{5}(-\d{4})?$/.test(formData.zipCode) // US ZIP code validation
+      /^\d{5}(-\d{4})?$/.test(formData.zipCode) && // US ZIP code validation
+      formData.selectedSessions.length === requiredSessionCount // Ensure correct number of sessions are selected
     )
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
 
+    // Determine required number of sessions based on program type
+    const isTwiceAWeek = registrationData?.programName?.toLowerCase().includes("twice")
+    const requiredSessionCount = isTwiceAWeek ? 2 : 1
+
     if (!isFormValid()) {
       toast({
         title: "Incomplete Form",
-        description: "Please fill in all required fields correctly.",
+        description: `Please fill in all required fields correctly and select ${requiredSessionCount} class session(s).`,
         variant: "destructive",
       })
       return
@@ -196,6 +343,7 @@ const PortalEntryForm = () => {
           state: formData.state,
           zipCode: formData.zipCode,
           country: formData.country,
+          classSessions: formData.selectedSessions.map(session => session.id), // Send only the session IDs
         }),
       })
 
@@ -233,6 +381,20 @@ const PortalEntryForm = () => {
         <div className="animate-pulse text-lg">Verifying registration...</div>
       </div>
     )
+  }
+
+  // Format time string to more readable format (e.g., "14:30" to "2:30 PM")
+  const formatTime = (timeString: string) => {
+    const [hours, minutes] = timeString.split(':').map(Number)
+    const period = hours >= 12 ? 'PM' : 'AM'
+    const formattedHours = hours % 12 || 12
+    return `${formattedHours}:${minutes.toString().padStart(2, '0')} ${period}`
+  }
+
+  // Calculate capacity percentage
+  const getCapacityPercentage = (available: number, total: number) => {
+    if (total === 0) return 0
+    return Math.round(((total - available) / total) * 100)
   }
 
   return (
@@ -277,6 +439,11 @@ const PortalEntryForm = () => {
                 <p className="text-sm">
                   <span className="font-medium">Email:</span> {registrationData.parentEmail}
                 </p>
+                {registrationData.programName && (
+                  <p className="text-sm mt-1">
+                    <span className="font-medium">Program:</span> {registrationData.programName}
+                  </p>
+                )}
               </div>
             )}
             <form onSubmit={handleSubmit} className="space-y-6">
@@ -430,6 +597,109 @@ const PortalEntryForm = () => {
                       className="bg-muted"
                     />
                   </div>
+                </div>
+              </div>
+
+              {/* Class Session Selection Section */}
+              <div className="space-y-4">
+                <h3 className="text-lg font-semibold flex items-center gap-2">
+                  <CalendarIcon className="h-5 w-5" />
+                  Class Session Selection <span className="text-red-500">*</span>
+                </h3>
+                <div className="p-4 bg-slate-100 dark:bg-slate-800 rounded-lg border border-slate-200 dark:border-slate-700">
+                  {sessionLoading ? (
+                    <div className="flex justify-center py-8">
+                      <div className="animate-pulse text-lg">Loading available sessions...</div>
+                    </div>
+                  ) : availableSessions.length === 0 ? (
+                    <div className="py-4 text-center text-slate-600 dark:text-slate-400">
+                      No class sessions are currently available for this program.
+                    </div>
+                  ) : (
+                    <>
+                      <div className="flex items-center mb-4 gap-2">
+                        <p className="text-sm text-slate-600 dark:text-slate-400">
+                          Select {registrationData?.programName?.toLowerCase().includes("twice") ? "two sessions" : "one session"} that work best for your schedule:
+                        </p>
+                        <Badge variant="outline" className="ml-auto">
+                          {formData.selectedSessions.length} / {registrationData?.programName?.toLowerCase().includes("twice") ? "2" : "1"} selected
+                        </Badge>
+                      </div>
+
+                      {/* Important notes */}
+                      <div className="mb-4 p-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-md">
+                        <div className="flex items-start gap-2">
+                          <AlertTriangle className="h-5 w-5 text-amber-500 mt-0.5 flex-shrink-0" />
+                          <div className="text-sm text-amber-800 dark:text-amber-300">
+                            <p className="font-medium">Important:</p>
+                            <ul className="list-disc pl-4 mt-1 space-y-1">
+                              <li>You cannot select multiple sessions on the same day</li>
+                              <li>Once selected, your sessions cannot be changed without contacting support</li>
+                              <li>Session capacity is limited and available on a first-come, first-served basis</li>
+                            </ul>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="grid gap-3">
+                        {availableSessions.map((session) => {
+                          const isSelected = formData.selectedSessions.some(s => s.id === session.id)
+                          const capacityPercentage = getCapacityPercentage(session.available_capacity, session.total_capacity)
+                          const isFull = isSessionAtCapacity(session)
+
+                          return (
+                            <div
+                              key={session.id}
+                              className={`p-3 rounded-md border transition-colors ${isFull
+                                ? "bg-gray-100 dark:bg-gray-800 border-gray-300 dark:border-gray-700 opacity-75 cursor-not-allowed"
+                                : isSelected
+                                  ? "bg-primary/20 border-primary cursor-pointer"
+                                  : "bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-700 hover:border-primary/50 cursor-pointer"
+                                }`}
+                              onClick={() => !isFull && handleSessionSelection(session)}
+                            >
+                              <div className="flex flex-col sm:flex-row sm:justify-between sm:items-center gap-2">
+                                <div>
+                                  <div className="font-medium">{session.weekday}</div>
+                                  <div className="text-sm text-slate-600 dark:text-slate-400">
+                                    {formatTime(session.start_time)} - {formatTime(session.end_time)}
+                                  </div>
+                                  <div className="flex items-center gap-2 mt-1">
+                                    <Badge variant={session.type === "weekday" ? "default" : "secondary"} className="text-xs">
+                                      {session.type === "weekday" ? "Weekday" : "Weekend"}
+                                    </Badge>
+                                    {isFull && (
+                                      <Badge variant="destructive" className="text-xs">
+                                        Full
+                                      </Badge>
+                                    )}
+                                  </div>
+                                </div>
+                                <div className="flex flex-col gap-1 w-full sm:w-32">
+                                  <div className="flex justify-between items-center text-xs">
+                                    <span>Capacity:</span>
+                                    <span>{session.available_capacity} of {session.total_capacity} available</span>
+                                  </div>
+                                  <Progress value={capacityPercentage} className="h-2" />
+                                  {isSelected && (
+                                    <div className="flex justify-end mt-1">
+                                      <CheckCircle className="h-5 w-5 text-primary" />
+                                    </div>
+                                  )}
+                                </div>
+                              </div>
+                            </div>
+                          )
+                        })}
+                      </div>
+
+                      {formData.selectedSessions.length === 0 && (
+                        <p className="text-sm mt-4 text-amber-600 dark:text-amber-400">
+                          Please select {registrationData?.programName?.toLowerCase().includes("twice") ? "two sessions" : "one session"} to continue.
+                        </p>
+                      )}
+                    </>
+                  )}
                 </div>
               </div>
 

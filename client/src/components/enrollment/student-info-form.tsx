@@ -75,10 +75,10 @@ export function StudentInfoForm({ formData, handleChange, setActiveTab }: Studen
         </Button>
         <Button
           type="button"
-          onClick={() => setActiveTab("sessions")}
+          onClick={() => setActiveTab("payment")}
           disabled={!isStudentInfoComplete()}
         >
-          Continue to Class Sessions
+          Continue to Payment
         </Button>
       </div>
     </div>

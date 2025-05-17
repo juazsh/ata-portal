@@ -1,23 +1,29 @@
 "use client"
 
 import type React from "react"
-
+import { useState, useEffect } from "react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import type { FormData } from "./enrollment-types"
-
 interface ParentInfoFormProps {
   formData: FormData
   handleChange: (e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>) => void
   setActiveTab: (tab: string) => void
+  onExistingUserDetected: (email: string) => void
 }
 
-export function ParentInfoForm({ formData, handleChange, setActiveTab }: ParentInfoFormProps) {
+export function ParentInfoForm({
+  formData,
+  handleChange,
+  setActiveTab,
+  onExistingUserDetected
+}: ParentInfoFormProps) {
+  const [isCheckingEmail, setIsCheckingEmail] = useState(false)
+  const [emailError, setEmailError] = useState("")
+
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
-
   const phoneRegex = /^(\+?1[-.\s]?)?(\(?\d{3}\)?[-.\s]?)?\d{3}[-.\s]?\d{4}$/
-
 
   const isParentInfoComplete = () => {
     return (
@@ -26,14 +32,54 @@ export function ParentInfoForm({ formData, handleChange, setActiveTab }: ParentI
       formData.parentEmail.trim() !== "" &&
       emailRegex.test(formData.parentEmail) &&
       formData.parentPhone.trim() !== "" &&
-      phoneRegex.test(formData.parentPhone)
+      phoneRegex.test(formData.parentPhone) &&
+      !emailError
     )
   }
 
-  // Enhanced handleChange with validation
   const handleChangeWithValidation = (e: React.ChangeEvent<HTMLInputElement>) => {
     handleChange(e)
+
+
+    if (e.target.name === "parentEmail") {
+      setEmailError("")
+    }
   }
+
+  const verifyEmail = async (email: string) => {
+    if (!emailRegex.test(email)) return
+
+    setIsCheckingEmail(true)
+    try {
+      const response = await fetch(`/api/users/verify/email?email=${encodeURIComponent(email)}`)
+
+      if (!response.ok) {
+        throw new Error("Failed to verify email")
+      }
+
+      const data = await response.json()
+
+      if (data.exists) {
+        // Call the parent component's handler instead of showing the modal directly
+        onExistingUserDetected(email)
+      }
+    } catch (error) {
+      console.error("Error verifying email:", error)
+    } finally {
+      setIsCheckingEmail(false)
+    }
+  }
+
+  // Check email when user finishes typing (debounce)
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      if (formData.parentEmail && emailRegex.test(formData.parentEmail)) {
+        verifyEmail(formData.parentEmail)
+      }
+    }, 500)
+
+    return () => clearTimeout(timer)
+  }, [formData.parentEmail])
 
   return (
     <div>
@@ -69,22 +115,30 @@ export function ParentInfoForm({ formData, handleChange, setActiveTab }: ParentI
         <Label htmlFor="parentEmail">
           Email Address <span className="text-red-500">*</span>
         </Label>
-        <Input
-          id="parentEmail"
-          name="parentEmail"
-          type="email"
-          value={formData.parentEmail}
-          onChange={handleChangeWithValidation}
-          required
-          className={
-            formData.parentEmail && !emailRegex.test(formData.parentEmail)
-              ? "border-red-500"
-              : ""
-          }
-        />
+        <div className="relative">
+          <Input
+            id="parentEmail"
+            name="parentEmail"
+            type="email"
+            value={formData.parentEmail}
+            onChange={handleChangeWithValidation}
+            required
+            className={
+              (formData.parentEmail && !emailRegex.test(formData.parentEmail)) || emailError
+                ? "border-red-500"
+                : ""
+            }
+          />
+          {isCheckingEmail && (
+            <div className="absolute right-3 top-1/2 transform -translate-y-1/2">
+              <div className="h-4 w-4 border-t-2 border-blue-500 border-r-2 rounded-full animate-spin"></div>
+            </div>
+          )}
+        </div>
         {formData.parentEmail && !emailRegex.test(formData.parentEmail) && (
           <p className="text-red-500 text-sm mt-1">Please enter a valid email address</p>
         )}
+        {emailError && <p className="text-red-500 text-sm mt-1">{emailError}</p>}
       </div>
 
       <div className="mt-4 space-y-2">

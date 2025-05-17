@@ -1,3 +1,4 @@
+
 import { Request, Response } from "express";
 import mongoose from "mongoose";
 import { Registration } from "../models/registration";
@@ -7,10 +8,75 @@ import { Program, Module } from "../models/program";
 import { ProgramProgress, ModuleProgress } from "../models/student-progress";
 import { sendMail } from "../services/email";
 import { getPortalAccountEmailTemplate } from "../utils/portal-account-email-templates";
+import { updateSessionCapacity } from "./class-sessions";
+
+async function createParentUser(
+  registration: any,
+  password: string,
+  address: any,
+  session: mongoose.ClientSession
+): Promise<mongoose.Document> {
+  const parentUser = new User({
+    firstName: registration.parentFirstName,
+    lastName: registration.parentLastName,
+    email: registration.parentEmail,
+    password: password,
+    phone: registration.parentPhone,
+    address: {
+      street: address.street,
+      street2: address.street2,
+      city: address.city,
+      state: address.state,
+      zip: address.zip,
+      country: address.country
+    },
+    role: UserRole.PARENT,
+    active: true
+  });
+  return await parentUser.save({ session });
+}
+
+
+async function createStudentUser(
+  firstName: string,
+  lastName: string,
+  dob: Date,
+  parentId: mongoose.Types.ObjectId,
+  password: string,
+  session: mongoose.ClientSession
+): Promise<{ user: mongoose.Document, username: string, email: string }> {
+  const username = await generateUsername(firstName, lastName);
+  const email = `${username}@stemmasters.com`;
+
+  const studentUser = new User({
+    firstName: firstName,
+    lastName: lastName,
+    email: email,
+    username: username,
+    password: password,
+    dateOfBirth: dob,
+    role: UserRole.STUDENT,
+    parentId: parentId,
+    active: true,
+    location: "Main Learning Center",
+    level: "Beginner",
+    progress: 0,
+    achievements: [],
+    progressData: [{ month: "Current", score: 0, date: new Date() }],
+    subjectProgress: [
+      { subject: "Math", score: 0, lastUpdated: new Date() },
+      { subject: "Science", score: 0, lastUpdated: new Date() },
+      { subject: "English", score: 0, lastUpdated: new Date() },
+      { subject: "History", score: 0, lastUpdated: new Date() }
+    ]
+  });
+
+  const savedStudent = await studentUser.save({ session });
+  return { user: savedStudent, username, email };
+}
 
 
 async function generateUsername(firstName: string, lastName: string): Promise<string> {
-
   const firstPart = firstName.slice(0, 3).toLowerCase();
   const lastPart = lastName.slice(0, 3).toLowerCase();
   let baseUsername = firstPart + lastPart;
@@ -39,10 +105,11 @@ export const createPortalAccount = async (req: Request, res: Response) => {
       city,
       state,
       zipCode,
-      country
+      country,
+      classSessions
     } = req.body;
 
-    if (!registrationId || !password || !address1 || !city || !state || !zipCode || !country) {
+    if (!registrationId || !password || !address1 || !city || !state || !zipCode || !country || !classSessions || !classSessions.length) {
       return res.status(400).json({
         message: "Missing required fields"
       });
@@ -58,71 +125,76 @@ export const createPortalAccount = async (req: Request, res: Response) => {
       });
     }
 
-
     if (registration.isRegistrationComplete || registration.isRegLinkedWithEnrollment || registration.isUserSetup) {
       return res.status(400).json({
         message: "Link expired or account already created for this registration ID"
       });
     }
 
-    const parentUser = new User({
-      firstName: registration.parentFirstName,
-      lastName: registration.parentLastName,
-      email: registration.parentEmail,
-      password: password,
-      phone: registration.parentPhone,
-      address: {
+
+    const isProgramTwiceAWeek = registration.offeringId.name.toLowerCase().includes('twice');
+    const expectedSessionCount = isProgramTwiceAWeek ? 2 : 1;
+
+    if (classSessions.length !== expectedSessionCount) {
+      return res.status(400).json({
+        message: `This program requires exactly ${expectedSessionCount} class session(s)`
+      });
+    }
+
+
+    const sessionDays = new Set();
+    for (const sessionId of classSessions) {
+      const sessionDay = await getSessionDay(sessionId);
+      if (sessionDay && sessionDays.has(sessionDay)) {
+        return res.status(400).json({
+          message: "You cannot select multiple sessions on the same day"
+        });
+      }
+      if (sessionDay) {
+        sessionDays.add(sessionDay);
+      }
+    }
+
+
+    const capacityResults = [];
+    for (const sessionId of classSessions) {
+      const result = await updateSessionCapacity(sessionId, false);
+      capacityResults.push(result);
+    }
+
+
+    if (capacityResults.includes(false)) {
+      return res.status(400).json({
+        message: "One or more selected sessions are no longer available. Please select different sessions."
+      });
+    }
+
+    const savedParent = await createParentUser(
+      registration,
+      password,
+      {
         street: address1,
         street2: address2,
-        city: city,
-        state: state,
+        city,
+        state,
         zip: zipCode,
-        country: country
+        country
       },
-      role: UserRole.PARENT,
-      active: true
-    });
+      session
+    );
 
-    const savedParent = await parentUser.save({ session });
-
-
-    const studentUsername = await generateUsername(registration.studentFirstName, registration.studentLastName);
-
-
-    const studentEmail = `${studentUsername}@stemmasters.com`;
-
-    const studentUser = new User({
-      firstName: registration.studentFirstName,
-      lastName: registration.studentLastName,
-      email: studentEmail,
-      username: studentUsername,
-      password: password,
-      dateOfBirth: registration.studentDOB,
-      role: UserRole.STUDENT,
-      parentId: savedParent._id,
-      active: true,
-
-      location: "Main Learning Center",
-      level: "Beginner",
-      progress: 0,
-      achievements: [],
-      progressData: [
-        { month: "Current", score: 0, date: new Date() }
-      ],
-      subjectProgress: [
-        { subject: "Math", score: 0, lastUpdated: new Date() },
-        { subject: "Science", score: 0, lastUpdated: new Date() },
-        { subject: "English", score: 0, lastUpdated: new Date() },
-        { subject: "History", score: 0, lastUpdated: new Date() }
-      ]
-    });
-
-    const savedStudent = await studentUser.save({ session });
+    const { user: savedStudent, username, email } = await createStudentUser(
+      registration.studentFirstName,
+      registration.studentLastName,
+      registration.studentDOB,
+      savedParent._id,
+      password,
+      session
+    );
 
 
     savedParent.students = [savedStudent._id];
     await savedParent.save({ session });
-
 
     const program = await Program.findById(registration.programId).populate('modules');
     if (!program) {
@@ -139,9 +211,9 @@ export const createPortalAccount = async (req: Request, res: Response) => {
       totalAmount: registration.totalAmountDue,
       offeringType: registration.offeringId.name.includes('Marathon') ? 'Marathon' : 'Sprint',
       paymentMethod: registration.paymentMethod,
-      paymentStatus: 'completed'
+      paymentStatus: 'completed',
+      classSessions: classSessions
     };
-
 
     if (enrollmentData.offeringType === 'Marathon') {
       enrollmentData.monthlyAmount = program.price;
@@ -156,7 +228,6 @@ export const createPortalAccount = async (req: Request, res: Response) => {
     const enrollment = new Enrollment(enrollmentData);
     await enrollment.save({ session });
 
-
     const programProgress = new ProgramProgress({
       studentId: savedStudent._id,
       programId: registration.programId,
@@ -167,7 +238,6 @@ export const createPortalAccount = async (req: Request, res: Response) => {
     });
 
     await programProgress.save({ session });
-
 
     const modules = await Module.find({ _id: { $in: program.modules } }).populate('topics');
 
@@ -186,12 +256,10 @@ export const createPortalAccount = async (req: Request, res: Response) => {
 
     await Promise.all(moduleProgressPromises);
 
-
     registration.isRegistrationComplete = true;
     registration.isRegLinkedWithEnrollment = true;
     registration.isUserSetup = true;
     await registration.save({ session });
-
 
     const emailHtml = getPortalAccountEmailTemplate({
       parentFirstName: registration.parentFirstName,
@@ -231,3 +299,14 @@ export const createPortalAccount = async (req: Request, res: Response) => {
     });
   }
 };
+
+async function getSessionDay(sessionId: string): Promise<string | null> {
+  try {
+    const { ClassSession } = require('../models/class-session');
+    const session = await ClassSession.findOne({ id: sessionId });
+    return session ? session.weekday : null;
+  } catch (error) {
+    console.error("Error fetching session day:", error);
+    return null;
+  }
+}

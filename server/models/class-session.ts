@@ -7,8 +7,10 @@ export interface IClassSession extends Document {
   start_time: string;
   end_time: string;
   type: "weekday" | "weekend";
-  regular_capacity: number;
-  capacity_demo: number;
+  total_capacity: number;
+  available_capacity: number;
+  total_demo_capacity: number;
+  available_demo_capacity: number;
 }
 
 const ClassSessionSchema = new Schema<IClassSession>(
@@ -19,8 +21,10 @@ const ClassSessionSchema = new Schema<IClassSession>(
     start_time: { type: String, required: true },
     end_time: { type: String, required: true },
     type: { type: String, enum: ["weekday", "weekend"], required: true },
-    regular_capacity: { type: Number, required: true },
-    capacity_demo: { type: Number, required: true }
+    total_capacity: { type: Number, required: true },
+    available_capacity: { type: Number, required: true },
+    total_demo_capacity: { type: Number, required: true },
+    available_demo_capacity: { type: Number, required: true }
   },
   { timestamps: true }
 );
