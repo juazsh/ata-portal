@@ -6,7 +6,7 @@ import { Separator } from "@/components/ui/separator"
 import { Popover, PopoverContent, PopoverTrigger } from "@/components/ui/popover"
 import { Calendar } from "@/components/ui/calendar"
 import { CalendarIcon } from "lucide-react"
-import { Badge } from "@/components/ui/badge" // Import Badge component
+import { Badge } from "@/components/ui/badge"
 import type { Program, FormData } from "./enrollment-types"
 
 interface EnrollmentDetailsProps {
@@ -54,37 +54,54 @@ export function EnrollmentDetails({
                 {program.offering.name}
               </Badge>
             </div>
-            <div className="flex justify-between items-center">
-              <span className="text-slate-600 dark:text-slate-400">Start Date:</span>
-              <Popover>
-                <PopoverTrigger asChild>
-                  <Button
-                    variant="outline"
-                    className={`w-[240px] justify-start text-left font-normal ${!isValidDate(formData.enrollmentDate) && formData.enrollmentDate ? "border-red-500" : ""}`}
-                  >
-                    <CalendarIcon className="mr-2 h-4 w-4" />
-                    {formData.enrollmentDate ? (
-                      isValidDate(formData.enrollmentDate) ? (
-                        format(formData.enrollmentDate, "PPP")
+
+            <div className="flex flex-col space-y-2 bg-blue-50 dark:bg-blue-900/20 p-3 rounded-md border-l-4 border-blue-500">
+              <div className="flex justify-between items-center">
+                <span className="text-slate-800 dark:text-slate-200 font-medium flex items-center">
+                  Start Date: <span className="text-red-500 ml-1">*</span>
+                </span>
+                <Popover>
+                  <PopoverTrigger asChild>
+                    <Button
+                      variant="outline"
+                      className={`w-[240px] justify-start text-left font-normal border-2 ${!isValidDate(formData.enrollmentDate) && formData.enrollmentDate
+                        ? "border-red-500 bg-red-50 dark:bg-red-900/20"
+                        : !formData.enrollmentDate
+                          ? "border-amber-400 bg-amber-50 dark:bg-amber-900/20 animate-pulse"
+                          : "border-green-500 bg-green-50 dark:bg-green-900/20"
+                        }`}
+                    >
+                      <CalendarIcon className="mr-2 h-4 w-4" />
+                      {formData.enrollmentDate ? (
+                        isValidDate(formData.enrollmentDate) ? (
+                          format(formData.enrollmentDate, "PPP")
+                        ) : (
+                          <span className="text-red-500">Date must be today or later</span>
+                        )
                       ) : (
-                        "Date must be today or later"
-                      )
-                    ) : (
-                      <span>Pick a date</span>
-                    )}
-                  </Button>
-                </PopoverTrigger>
-                <PopoverContent className="w-auto p-0">
-                  <Calendar
-                    mode="single"
-                    selected={formData.enrollmentDate}
-                    onSelect={handleDateChange}
-                    disabled={(date) => date < new Date(new Date().setHours(0, 0, 0, 0))}
-                    initialFocus
-                  />
-                </PopoverContent>
-              </Popover>
+                        <span className="text-amber-600 dark:text-amber-400 font-medium">Required - Pick a date</span>
+                      )}
+                    </Button>
+                  </PopoverTrigger>
+                  <PopoverContent className="w-auto p-0">
+                    <Calendar
+                      mode="single"
+                      selected={formData.enrollmentDate}
+                      onSelect={handleDateChange}
+                      disabled={(date) => date < new Date(new Date().setHours(0, 0, 0, 0))}
+                      initialFocus
+                      className="border-2 border-blue-200"
+                    />
+                  </PopoverContent>
+                </Popover>
+              </div>
+              {!formData.enrollmentDate && (
+                <p className="text-sm text-amber-600 dark:text-amber-400">
+                  Please select a start date to continue enrollment
+                </p>
+              )}
             </div>
+
             <div className="flex justify-between">
               <span className="text-slate-600 dark:text-slate-400">Attendance Limit:</span>
               <span className="font-medium text-slate-900 dark:text-slate-50">{getAttendanceLimit()}</span>
@@ -137,6 +154,7 @@ export function EnrollmentDetails({
               type="button"
               onClick={() => setActiveTab("parent")}
               disabled={!formData.enrollmentDate || !isValidDate(formData.enrollmentDate)}
+              className={!formData.enrollmentDate || !isValidDate(formData.enrollmentDate) ? "opacity-50" : ""}
             >
               Continue to Parent Info
             </Button>
