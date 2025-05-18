@@ -9,7 +9,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog"
-import { CheckCircle, AlertCircle, CalendarIcon, AlertTriangle } from "lucide-react"
+import { CheckCircle, AlertCircle, CalendarIcon, AlertTriangle, Eye, EyeOff } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import logoImage from "@/assets/images/new_logo.png"
 import { Badge } from "@/components/ui/badge"
@@ -99,6 +99,8 @@ const PortalEntryForm = () => {
   const [, setLocation] = useLocation()
   const { toast } = useToast()
 
+  const [showPassword, setShowPassword] = useState(false)
+  const [showConfirmPassword, setShowConfirmPassword] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
   const [isVerifying, setIsVerifying] = useState(true)
   const [showErrorModal, setShowErrorModal] = useState(false)
@@ -454,19 +456,29 @@ const PortalEntryForm = () => {
                   <Label htmlFor="password">
                     Password <span className="text-red-500">*</span>
                   </Label>
-                  <Input
-                    id="password"
-                    name="password"
-                    type="password"
-                    value={formData.password}
-                    onChange={handleChange}
-                    required
-                    className={
-                      formData.password && !isPasswordValid(formData.password)
-                        ? "border-red-500"
-                        : ""
-                    }
-                  />
+                  <div className="relative">
+                    <Input
+                      id="password"
+                      name="password"
+                      type={showPassword ? "text" : "password"}
+                      value={formData.password}
+                      onChange={handleChange}
+                      required
+                      className={
+                        formData.password && !isPasswordValid(formData.password)
+                          ? "border-red-500"
+                          : ""
+                      }
+                    />
+                    <button
+                      type="button"
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300"
+                      onClick={() => setShowPassword(!showPassword)}
+                      aria-label={showPassword ? "Hide password" : "Show password"}
+                    >
+                      {showPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                    </button>
+                  </div>
                   {formData.password && !isPasswordValid(formData.password) && (
                     <p className="text-red-500 text-sm">
                       Password must be at least 8 characters long and contain uppercase, lowercase, number, and special character
@@ -478,19 +490,29 @@ const PortalEntryForm = () => {
                   <Label htmlFor="confirmPassword">
                     Confirm Password <span className="text-red-500">*</span>
                   </Label>
-                  <Input
-                    id="confirmPassword"
-                    name="confirmPassword"
-                    type="password"
-                    value={formData.confirmPassword}
-                    onChange={handleChange}
-                    required
-                    className={
-                      formData.confirmPassword && formData.password !== formData.confirmPassword
-                        ? "border-red-500"
-                        : ""
-                    }
-                  />
+                  <div className="relative">
+                    <Input
+                      id="confirmPassword"
+                      name="confirmPassword"
+                      type={showConfirmPassword ? "text" : "password"}
+                      value={formData.confirmPassword}
+                      onChange={handleChange}
+                      required
+                      className={
+                        formData.confirmPassword && formData.password !== formData.confirmPassword
+                          ? "border-red-500"
+                          : ""
+                      }
+                    />
+                    <button
+                      type="button"
+                      className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-300"
+                      onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                      aria-label={showConfirmPassword ? "Hide password" : "Show password"}
+                    >
+                      {showConfirmPassword ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
+                    </button>
+                  </div>
                   {formData.confirmPassword && formData.password !== formData.confirmPassword && (
                     <p className="text-red-500 text-sm">Passwords do not match</p>
                   )}
