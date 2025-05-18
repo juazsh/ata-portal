@@ -10,6 +10,8 @@ import { sendMail } from "../services/email";
 import { getPortalAccountEmailTemplate } from "../utils/portal-account-email-templates";
 import { updateSessionCapacity } from "./class-sessions";
 
+import { ClassSession } from '../models/class-session';
+
 async function createParentUser(
   registration: any,
   password: string,
@@ -394,7 +396,6 @@ export const createAdditionalStudent = async (req: Request, res: Response) => {
 
 async function getSessionDay(sessionId: string): Promise<string | null> {
   try {
-    const { ClassSession } = require('../models/class-session');
     const session = await ClassSession.findOne({ id: sessionId });
     return session ? session.weekday : null;
   } catch (error) {
