@@ -386,6 +386,7 @@ export const createAdditionalStudent = async (req: Request, res: Response) => {
     await session.abortTransaction();
     session.endSession();
     console.error("Error creating additional student:", error);
+    console.log(error);
     return res.status(500).json({
       message: "Failed to create additional student",
       error: (error as Error).message
