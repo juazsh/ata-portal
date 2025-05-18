@@ -2,24 +2,12 @@ import { useState, useEffect } from "react";
 import { Route, useLocation, useRoute } from "wouter";
 import { Header } from "@/components/dashboard/header";
 import { Sidebar } from "@/components/dashboard/sidebar";
-import { StatsCards } from "@/components/dashboard/stats-cards";
-import { RecentActivities } from "@/components/dashboard/recent-activities";
-import { Announcements } from "@/components/dashboard/announcements";
-import { Calendar } from "@/components/dashboard/calendar";
 import StudentMenu from "@/components/dashboard/student-menu";
 import ProgramsPage from "@/components/dashboard/programs/program-page"
 import { useAuth } from "@/hooks/use-auth";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
 import { Button } from "@/components/ui/button";
-import {
-  Sheet,
-  SheetContent,
-  SheetDescription,
-  SheetHeader,
-  SheetTitle,
-  SheetTrigger,
-} from "@/components/ui/sheet";
 import { Badge } from "@/components/ui/badge";
 import { Skeleton } from "@/components/ui/skeleton";
 import {
@@ -41,8 +29,6 @@ import { PageHeader } from "@/components/ui/page-header";
 import { PaymentMethodModal } from "@/components/dashboard/payment-method-modal";
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { useToast } from "@/hooks/use-toast";
-import { is } from "drizzle-orm";
-import { userInfo } from "os";
 import { StudentManagement } from "@/components/dashboard/student-management";
 import ClassSessionsPage from "@/components/class-session/class-session-page";
 

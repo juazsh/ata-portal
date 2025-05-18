@@ -266,8 +266,8 @@ export const createPortalAccount = async (req: Request, res: Response) => {
       parentLastName: registration.parentLastName,
       studentFirstName: registration.studentFirstName,
       studentLastName: registration.studentLastName,
-      studentUsername: studentUsername,
-      studentEmail: studentEmail,
+      studentUsername: username,
+      studentEmail: email,
       registrationId: registration._id.toString()
     });
 
@@ -285,7 +285,7 @@ export const createPortalAccount = async (req: Request, res: Response) => {
       parentId: savedParent._id,
       studentId: savedStudent._id,
       enrollmentId: enrollment._id,
-      studentUsername: studentUsername
+      studentUsername: username
     });
 
   } catch (error) {
@@ -299,6 +299,98 @@ export const createPortalAccount = async (req: Request, res: Response) => {
     });
   }
 };
+
+export const createAdditionalStudent = async (req: Request, res: Response) => {
+  const session = await mongoose.startSession();
+  session.startTransaction();
+
+  try {
+    const { parentId, programId, classSessions, studentFirstName, studentLastName, studentDOB } = req.body;
+
+    if (!parentId || !programId || !studentFirstName || !studentLastName || !studentDOB) {
+      return res.status(400).json({ message: "Missing required fields" });
+    }
+
+    const parent = await User.findById(parentId).session(session);
+    if (!parent) {
+      return res.status(404).json({ message: "Parent not found" });
+    }
+
+    const program = await Program.findById(programId).populate('modules').session(session);
+    if (!program) {
+      return res.status(404).json({ message: "Program not found" });
+    }
+
+    // Create new student
+    const { user: savedStudent, username, email } = await createStudentUser(
+      studentFirstName,
+      studentLastName,
+      studentDOB,
+      parentId,
+      //password,
+      session
+    );
+
+    // Create enrollment
+    const enrollment = new Enrollment({
+      programId,
+      studentId: savedStudent._id,
+      parentId,
+      //offeringType: classSessions?.length > 10 ? 'Marathon' : 'Sprint', // Example logic
+      paymentMethod: 'manual',
+      paymentStatus: 'pending',
+      programFee: program.price,
+      totalAmount: program.price,
+      classSessions
+    });
+
+    await enrollment.save({ session });
+
+    const programProgress = new ProgramProgress({
+      studentId: savedStudent._id,
+      programId,
+      completedModules: 0,
+      totalModules: program.modules.length,
+      completionPercentage: 0,
+      lastUpdatedAt: new Date()
+    });
+    await programProgress.save({ session });
+
+    const moduleProgressPromises = program.modules.map((module: any) =>
+      new ModuleProgress({
+        studentId: savedStudent._id,
+        moduleId: module._id,
+        programId,
+        completedTopics: 0,
+        totalTopics: module.topics.length,
+        completionPercentage: 0,
+        lastUpdatedAt: new Date(),
+        marks: 0
+      }).save({ session })
+    );
+    await Promise.all(moduleProgressPromises);
+
+    await session.commitTransaction();
+    session.endSession();
+
+    return res.status(201).json({
+      message: "Additional student account created successfully",
+      studentId: savedStudent._id,
+      username,
+      enrollmentId: enrollment._id
+    });
+
+  } catch (error) {
+    await session.abortTransaction();
+    session.endSession();
+    console.error("Error creating additional student:", error);
+    return res.status(500).json({
+      message: "Failed to create additional student",
+      error: (error as Error).message
+    });
+  }
+};
+
 
 async function getSessionDay(sessionId: string): Promise<string | null> {
   try {

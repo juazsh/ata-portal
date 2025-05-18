@@ -492,7 +492,7 @@ const FinalizeEnrollment = () => {
           </DialogHeader>
           <div className="flex flex-col gap-4 justify-center mt-6">
             <Button asChild className="w-full">
-              <Link href="/login">
+              <Link href="/auth">
                 Log In
               </Link>
             </Button>
