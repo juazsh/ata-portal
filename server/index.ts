@@ -10,7 +10,6 @@ const app = express();
 app.use(express.json());
 app.use(express.urlencoded({ extended: false }));
 
-// Configure CORS to allow requests from stem-masters.org
 const corsOptions = {
   origin: ['https://stem-masters.org'],
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
@@ -18,7 +17,6 @@ const corsOptions = {
   credentials: false
 };
 
-// Apply CORS to all routes
 app.use(cors(corsOptions));
 
 app.use((req, res, next) => {

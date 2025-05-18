@@ -144,6 +144,8 @@ export const createPortalAccount = async (req: Request, res: Response) => {
     }
 
 
+    console.log("Class Session check passed");
+
     const sessionDays = new Set();
     for (const sessionId of classSessions) {
       const sessionDay = await getSessionDay(sessionId);
@@ -171,6 +173,8 @@ export const createPortalAccount = async (req: Request, res: Response) => {
       });
     }
 
+    console.log("Session capacity updated successfully");
+
     const savedParent = await createParentUser(
       registration,
       password,
@@ -185,6 +189,8 @@ export const createPortalAccount = async (req: Request, res: Response) => {
       session
     );
 
+    console.log("Parent user created successfully", savedParent);
+
     const { user: savedStudent, username, email } = await createStudentUser(
       registration.studentFirstName,
       registration.studentLastName,
@@ -193,6 +199,8 @@ export const createPortalAccount = async (req: Request, res: Response) => {
       password,
       session
     );
+
+    console.log("Student user created successfully", savedStudent);
 
 
     savedParent.students = [savedStudent._id];
@@ -230,6 +238,8 @@ export const createPortalAccount = async (req: Request, res: Response) => {
     const enrollment = new Enrollment(enrollmentData);
     await enrollment.save({ session });
 
+    console.log("Enrollment created successfully", enrollment);
+
     const programProgress = new ProgramProgress({
       studentId: savedStudent._id,
       programId: registration.programId,
@@ -258,10 +268,14 @@ export const createPortalAccount = async (req: Request, res: Response) => {
 
     await Promise.all(moduleProgressPromises);
 
+    console.log("success creating related components");
+
     registration.isRegistrationComplete = true;
     registration.isRegLinkedWithEnrollment = true;
     registration.isUserSetup = true;
     await registration.save({ session });
+
+    console.log("Registration updated successfully");
 
     const emailHtml = getPortalAccountEmailTemplate({
       parentFirstName: registration.parentFirstName,
@@ -293,7 +307,8 @@ export const createPortalAccount = async (req: Request, res: Response) => {
   } catch (error) {
     await session.abortTransaction();
     session.endSession();
-
+    console.error("Error creating additional student:", error);
+    console.log(error);
     console.error("Error creating portal account:", error);
     return res.status(500).json({
       message: "Failed to create account",
@@ -323,7 +338,7 @@ export const createAdditionalStudent = async (req: Request, res: Response) => {
       return res.status(404).json({ message: "Program not found" });
     }
 
-    // Create new student
+
     const { user: savedStudent, username, email } = await createStudentUser(
       studentFirstName,
       studentLastName,
