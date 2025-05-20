@@ -148,7 +148,7 @@ const PortalEntryForm = () => {
 
         setRegistrationData(registration)
 
-        // After getting registration, fetch available sessions
+
         if (registration.programId) {
           fetchAvailableSessions(registration.programId)
         }
@@ -166,7 +166,7 @@ const PortalEntryForm = () => {
     }
   }, [params.rid])
 
-  // Fetch available class sessions based on the program
+
   const fetchAvailableSessions = async (programId: string) => {
     setSessionLoading(true)
     try {
@@ -350,8 +350,6 @@ const PortalEntryForm = () => {
       })
 
       const data = await response.json()
-      console.log(response);
-      console.log(data);
 
       if (!response.ok) {
         throw new Error(data.message || "Account creation failed")
@@ -363,9 +361,6 @@ const PortalEntryForm = () => {
 
       setShowSuccessModal(true)
     } catch (error) {
-      console.log(error);
-      console.log(error.message);
-      console.dir(error);
       console.error("Account creation error:", error)
       toast({
         title: "Account Creation Failed",
