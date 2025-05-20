@@ -361,6 +361,9 @@ const PortalEntryForm = () => {
 
       setShowSuccessModal(true)
     } catch (error) {
+      console.log(error);
+      console.log(error.message);
+      console.dir(error);
       console.error("Account creation error:", error)
       toast({
         title: "Account Creation Failed",
