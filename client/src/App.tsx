@@ -10,6 +10,8 @@ import { ProtectedRoute } from "@/lib/protected-route";
 import FinalizeEnrollment from "./pages/enrollment-finalize";
 import DemoClassRegistration from "./pages/demo-registration";
 import PortalEntryForm from "./pages/portal-entry";
+import ForgotPasswordPage from "@/pages/forget-password";
+import VerifyPasswordPage from "./pages/verify-password";
 
 
 function Router() {
@@ -22,6 +24,8 @@ function Router() {
       <Route path="/finalize/:pid" component={FinalizeEnrollment} />
       <Route path="/demo-registration" component={DemoClassRegistration} />
       <Route path="/portal-entry/:rid" component={PortalEntryForm} />
+      <Route path="/forgot-password" component={ForgotPasswordPage} />
+      <Route path="/verify-password" component={VerifyPasswordPage} />
       <ProtectedRoute path="/" component={Dashboard} />
       <ProtectedRoute path="/students" component={Dashboard} />
       <ProtectedRoute path="/add-location" component={Dashboard} />

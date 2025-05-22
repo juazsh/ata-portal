@@ -17,12 +17,13 @@ import { registerTopicRoutes } from "./routes/topics";
 import { registerEnrollmentRoutes } from "./routes/enrollments";
 import { registerDiscountCodeRoutes } from "./routes/discount-codes";
 import { registerPayPalRoutes } from "./routes/paypal";
+import { registerPasswordResetRoutes } from "./routes/password-reset";
 
 export async function registerRoutes(app: Express): Promise<Server> {
   const { isAuthenticated, hasRole } = await setupAuth(app);
 
-  // Register all route groups
   registerAuthRoutes(app);
+  registerPasswordResetRoutes(app);
   registerRegistrationRoutes(app, isAuthenticated, hasRole);
   registerDemoRegistrationRoutes(app, isAuthenticated, hasRole);
   registerClassSessionRoutes(app, isAuthenticated, hasRole);
@@ -38,7 +39,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   registerEnrollmentRoutes(app, isAuthenticated, hasRole);
   registerDiscountCodeRoutes(app, isAuthenticated, hasRole);
   registerPayPalRoutes(app, isAuthenticated);
-
+  
   const httpServer = createServer(app);
   return httpServer;
 }

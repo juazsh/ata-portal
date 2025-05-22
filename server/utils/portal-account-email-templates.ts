@@ -115,7 +115,7 @@ export function getPortalAccountEmailTemplate(data: PortalAccountEmailData): str
         
         <p>If you have any questions or need assistance, please don't hesitate to contact our support team.</p>
         
-        <a href="https://stemmasters.com/auth" class="button">Go to Login Page</a>
+        <a href="https://app.stem-masters.org/auth" class="button">Go to Login Page</a>
         
         <p>Best regards,<br>The STEM Masters Team</p>
       </div>

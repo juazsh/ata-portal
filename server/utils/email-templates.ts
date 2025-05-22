@@ -97,7 +97,7 @@ export function getRegistrationEmailTemplate(data: RegistrationEmailData): strin
         
         <p>Your registration invoice is attached to this email for your records.</p>
         
-        <p>If you have any questions or need assistance, please don't hesitate to contact us at support@stemmasters.com.</p>
+        <p>If you have any questions or need assistance, please don't hesitate to contact us at support@stem-masters.org.</p>
         
         <p>Best regards,<br>The STEM Masters Team</p>
       </div>

@@ -113,7 +113,7 @@ export function getDemoRegistrationEmailTemplate(data: DemoRegistrationEmailData
         <h3>Need to Reschedule?</h3>
         <p>If you need to reschedule or cancel your demo class, please contact us at least 24 hours in advance:</p>
         <ul>
-          <li>Email: support@stemmasters.com</li>
+          <li>Email: support@stem-masters.org</li>
           <li>Phone: (555) 123-4567</li>
         </ul>
         

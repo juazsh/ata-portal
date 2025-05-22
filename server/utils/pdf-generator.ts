@@ -125,7 +125,7 @@ export async function generateInvoicePDF(registration: IRegistration): Promise<B
       doc.fontSize(8)
         .font('Helvetica')
         .text('Thank you for choosing STEM Masters!', 50, 750, { align: 'center', width: 500 })
-        .text('For questions about this invoice, please contact us at support@stemmasters.com', 50, 765, { align: 'center', width: 500 });
+        .text('For questions about this invoice, please contact us at support@stem-masters.org', 50, 765, { align: 'center', width: 500 });
 
       doc.end();
     } catch (error) {

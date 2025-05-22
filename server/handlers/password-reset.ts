@@ -2,7 +2,8 @@ import { Request, Response } from "express";
 import { User } from "../lib/mongodb";
 import { PasswordReset } from "../models/password-reset";
 import { sendMail } from "../services/email";
-import { getPasswordResetEmailTemplate } from "../utils/password-reset-email-template"
+import { getPasswordResetEmailTemplate } from "../utils/password-reset-email-template";
+import bcrypt from "bcrypt";
 
 function generateVerificationCode(): string {
   return Math.floor(100000 + Math.random() * 900000).toString();
@@ -16,10 +17,8 @@ export const createPasswordResetRequest = async (req: Request, res: Response) =>
       return res.status(400).json({ message: "Email is required" });
     }
 
-    
     const user = await User.findOne({ email });
     if (!user) {
-      
       return res.status(200).json({
         message: "If your email is registered, you will receive a password reset code shortly"
       });
@@ -32,7 +31,6 @@ export const createPasswordResetRequest = async (req: Request, res: Response) =>
     const expiresAt = new Date();
     expiresAt.setHours(expiresAt.getHours() + 8);
 
-    
     await PasswordReset.deleteMany({ email });
 
    
@@ -80,6 +78,7 @@ export const verifyPasswordResetCode = async (req: Request, res: Response) => {
       return res.status(400).json({ message: "Email and code are required" });
     }
 
+    
     const resetRequest = await PasswordReset.findOne({
       email,
       code,
@@ -110,6 +109,39 @@ export const verifyPasswordResetCode = async (req: Request, res: Response) => {
 };
 
 
+export const verifyPasswordResetLink = async (req: Request, res: Response) => {
+  try {
+    const { email, code } = req.query;
+
+    if (!email || !code) {
+      return res.status(400).send("Email and code are required parameters");
+    }
+
+    
+    const resetRequest = await PasswordReset.findOne({
+      email: email.toString(),
+      code: code.toString(),
+      isVerified: false,
+      expiresAt: { $gt: new Date() }
+    });
+
+    if (!resetRequest) {
+      return res.status(400).send("Invalid or expired code. Please request a new password reset.");
+    }
+
+    
+    resetRequest.isVerified = true;
+    await resetRequest.save();
+
+    
+    return res.redirect(`/reset-password?resetId=${resetRequest._id}&email=${encodeURIComponent(email.toString())}`);
+
+  } catch (error) {
+    console.error("Error verifying password reset link:", error);
+    return res.status(500).send("An error occurred while verifying your reset code. Please try again.");
+  }
+};
+
 export const resetPassword = async (req: Request, res: Response) => {
   try {
     const { resetId, email, newPassword } = req.body;
@@ -118,6 +150,7 @@ export const resetPassword = async (req: Request, res: Response) => {
       return res.status(400).json({ message: "Reset ID, email, and new password are required" });
     }
 
+    
     const resetRequest = await PasswordReset.findOne({
       _id: resetId,
       email,
@@ -129,16 +162,20 @@ export const resetPassword = async (req: Request, res: Response) => {
       return res.status(400).json({ message: "Invalid or expired reset request" });
     }
 
+    
     const user = await User.findOne({ email });
     if (!user) {
       return res.status(404).json({ message: "User not found" });
     }
 
+   
     const saltRounds = 10;
     const hashedPassword = await bcrypt.hash(newPassword, saltRounds);
 
+   
     user.password = hashedPassword;
     await user.save();
+
     await PasswordReset.deleteOne({ _id: resetId });
 
     return res.status(200).json({

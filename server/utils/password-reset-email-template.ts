@@ -100,7 +100,7 @@ interface PasswordResetEmailData {
           <p>If you're having trouble clicking the button, you can also copy and paste the following link into your browser:</p>
           <p style="word-break: break-all; font-size: 12px;">${verifyLink}</p>
           
-          <p>If you have any questions or need assistance, please don't hesitate to contact us at support@stemmasters.com.</p>
+          <p>If you have any questions or need assistance, please don't hesitate to contact us at support@stem-masters.org.</p>
           
           <p>Best regards,<br>The STEM Masters Team</p>
         </div>
