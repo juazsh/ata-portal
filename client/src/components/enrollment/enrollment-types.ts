@@ -47,4 +47,6 @@ export interface FormData {
   cardExpiry?: string
   cardCVC?: string
   enrollmentDate: Date | undefined
+  stripePaymentMethodId?: string
+  stripeCustomerId?: string
 }

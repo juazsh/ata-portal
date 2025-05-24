@@ -9,6 +9,7 @@ import { Label } from "@/components/ui/label"
 import { Separator } from "@/components/ui/separator"
 import { CreditCardIcon } from "lucide-react"
 import type { Program, FormData } from "./enrollment-types"
+import { PaymentMethodModal } from "@/components/dashboard/payment-method-modal"
 
 interface PaymentFormProps {
   program: Program | null
@@ -30,16 +31,20 @@ export function PaymentForm({
   formData,
   discountCode,
   setDiscountCode,
-  handleChange,
   setFormData,
   getFirstPaymentAmount,
   getAdminFee,
   getTaxAmount,
-  getTotalAmountDue,
   setActiveTab,
   isLoading,
 }: PaymentFormProps) {
   const [showDiscountField, setShowDiscountField] = useState(false);
+  const [showStripeModal, setShowStripeModal] = useState(false);
+
+  const handleStripeSuccess = (paymentMethodId: string) => {
+    setFormData({ ...formData, stripePaymentMethodId: paymentMethodId });
+    setShowStripeModal(false);
+  };
 
   return (
     <>
@@ -105,31 +110,15 @@ export function PaymentForm({
             type="button"
             variant={formData.paymentMethod === "credit-card" ? "default" : "outline"}
             className="flex items-center justify-center gap-2 py-6"
-            onClick={() => setFormData({ ...formData, paymentMethod: "credit-card" })}
+            onClick={() => {
+              setFormData({ ...formData, paymentMethod: "credit-card" });
+              setShowStripeModal(true);
+            }}
           >
             <CreditCardIcon className="h-5 w-5" />
             <span>Credit Card</span>
           </Button>
         </div>
-
-        {formData.paymentMethod === "credit-card" && (
-          <div className="p-4 bg-slate-50 dark:bg-slate-800 rounded-lg space-y-4 mt-4">
-            <div className="space-y-2">
-              <Label htmlFor="cardNumber">Card Number</Label>
-              <Input id="cardNumber" name="cardNumber" placeholder="1234 5678 9012 3456" onChange={handleChange} />
-            </div>
-            <div className="grid grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="cardExpiry">Expiry Date</Label>
-                <Input id="cardExpiry" name="cardExpiry" placeholder="MM/YY" onChange={handleChange} />
-              </div>
-              <div className="space-y-2">
-                <Label htmlFor="cardCVC">CVC</Label>
-                <Input id="cardCVC" name="cardCVC" placeholder="123" onChange={handleChange} />
-              </div>
-            </div>
-          </div>
-        )}
       </div>
 
       <div className="flex justify-between mt-6">
@@ -153,6 +142,11 @@ export function PaymentForm({
           </Button>
         )}
       </div>
+      <PaymentMethodModal
+        open={showStripeModal}
+        onOpenChange={setShowStripeModal}
+        onSuccess={handleStripeSuccess}
+      />
     </>
   )
 }

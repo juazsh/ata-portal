@@ -3,15 +3,9 @@ import { User } from "../lib/mongodb";
 import { PasswordReset } from "../models/password-reset";
 import { sendMail } from "../services/email";
 import { getPasswordResetEmailTemplate } from "../utils/password-reset-email-template";
-import bcrypt from "bcrypt";
 
 function generateVerificationCode(): string {
   return Math.floor(100000 + Math.random() * 900000).toString();
-}
-
-async function hashPassword(password: string): Promise<string> {
-  const saltRounds = 10;
-  return bcrypt.hash(password, saltRounds);
 }
 
 export const createPasswordResetRequest = async (req: Request, res: Response) => {
@@ -29,15 +23,12 @@ export const createPasswordResetRequest = async (req: Request, res: Response) =>
       });
     }
 
-
     const code = generateVerificationCode();
-
 
     const expiresAt = new Date();
     expiresAt.setHours(expiresAt.getHours() + 8);
 
     await PasswordReset.deleteMany({ email });
-
 
     const passwordReset = new PasswordReset({
       email,
@@ -46,7 +37,6 @@ export const createPasswordResetRequest = async (req: Request, res: Response) =>
     });
 
     await passwordReset.save();
-
 
     const emailHtml = getPasswordResetEmailTemplate({
       firstName: user.firstName,
@@ -74,7 +64,6 @@ export const createPasswordResetRequest = async (req: Request, res: Response) =>
   }
 };
 
-
 export const verifyPasswordResetCode = async (req: Request, res: Response) => {
   try {
     const { email, code } = req.body;
@@ -82,7 +71,6 @@ export const verifyPasswordResetCode = async (req: Request, res: Response) => {
     if (!email || !code) {
       return res.status(400).json({ message: "Email and code are required" });
     }
-
 
     const resetRequest = await PasswordReset.findOne({
       email,
@@ -94,7 +82,6 @@ export const verifyPasswordResetCode = async (req: Request, res: Response) => {
     if (!resetRequest) {
       return res.status(400).json({ message: "Invalid or expired code" });
     }
-
 
     resetRequest.isVerified = true;
     await resetRequest.save();
@@ -113,7 +100,6 @@ export const verifyPasswordResetCode = async (req: Request, res: Response) => {
   }
 };
 
-
 export const verifyPasswordResetLink = async (req: Request, res: Response) => {
   try {
     const { email, code } = req.query;
@@ -121,7 +107,6 @@ export const verifyPasswordResetLink = async (req: Request, res: Response) => {
     if (!email || !code) {
       return res.status(400).send("Email and code are required parameters");
     }
-
 
     const resetRequest = await PasswordReset.findOne({
       email: email.toString(),
@@ -134,10 +119,8 @@ export const verifyPasswordResetLink = async (req: Request, res: Response) => {
       return res.status(400).send("Invalid or expired code. Please request a new password reset.");
     }
 
-
     resetRequest.isVerified = true;
     await resetRequest.save();
-
 
     return res.redirect(`/reset-password?resetId=${resetRequest._id}&email=${encodeURIComponent(email.toString())}`);
 
@@ -154,26 +137,32 @@ export const resetPassword = async (req: Request, res: Response) => {
     if (!resetId || !email || !newPassword) {
       return res.status(400).json({ message: "Reset ID, email, and new password are required" });
     }
+
     const resetRequest = await PasswordReset.findOne({
       _id: resetId,
       email,
       isVerified: true,
       expiresAt: { $gt: new Date() }
     });
+
     if (!resetRequest) {
       return res.status(400).json({ message: "Invalid or expired reset request" });
     }
+
     const user = await User.findOne({ email });
     if (!user) {
       return res.status(404).json({ message: "User not found" });
     }
-    const hashedPassword = await hashPassword(newPassword);
-    user.password = hashedPassword;
+    console.log("Setting new password for user:", email);
+    user.password = newPassword;
     await user.save();
+
     await PasswordReset.deleteOne({ _id: resetId });
+
     return res.status(200).json({
       message: "Password reset successfully"
     });
+
   } catch (error) {
     console.error("Error resetting password:", error);
     return res.status(500).json({

@@ -1,4 +1,3 @@
-
 import { Request, Response } from "express";
 import mongoose from "mongoose";
 import { Registration } from "../models/registration";
@@ -9,7 +8,6 @@ import { ProgramProgress, ModuleProgress } from "../models/student-progress";
 import { sendMail } from "../services/email";
 import { getPortalAccountEmailTemplate } from "../utils/portal-account-email-templates";
 import { updateSessionCapacity } from "./class-sessions";
-
 import { ClassSession } from '../models/class-session';
 
 async function createParentUser(
@@ -38,7 +36,6 @@ async function createParentUser(
   return await parentUser.save({ session });
 }
 
-
 async function createStudentUser(
   firstName: string,
   lastName: string,
@@ -49,7 +46,6 @@ async function createStudentUser(
 ): Promise<{ user: mongoose.Document, username: string, email: string }> {
   const username = await generateUsername(firstName, lastName);
   const email = `${username}@stemmasters.com`;
-
   const studentUser = new User({
     firstName: firstName,
     lastName: lastName,
@@ -76,7 +72,6 @@ async function createStudentUser(
   const savedStudent = await studentUser.save({ session });
   return { user: savedStudent, username, email };
 }
-
 
 async function generateUsername(firstName: string, lastName: string): Promise<string> {
   const firstPart = firstName.slice(0, 3).toLowerCase();
@@ -133,7 +128,6 @@ export const createPortalAccount = async (req: Request, res: Response) => {
       });
     }
 
-
     const isProgramTwiceAWeek = registration.offeringId.name.toLowerCase().includes('twice');
     const expectedSessionCount = isProgramTwiceAWeek ? 2 : 1;
 
@@ -142,7 +136,6 @@ export const createPortalAccount = async (req: Request, res: Response) => {
         message: `This program requires exactly ${expectedSessionCount} class session(s)`
       });
     }
-
 
     console.log("Class Session check passed");
 
@@ -159,13 +152,11 @@ export const createPortalAccount = async (req: Request, res: Response) => {
       }
     }
 
-
     const capacityResults = [];
     for (const sessionId of classSessions) {
       const result = await updateSessionCapacity(sessionId, false);
       capacityResults.push(result);
     }
-
 
     if (capacityResults.includes(false)) {
       return res.status(400).json({
@@ -191,20 +182,67 @@ export const createPortalAccount = async (req: Request, res: Response) => {
 
     console.log("Parent user created successfully", savedParent);
 
+    // --- Stripe Payment Method Attachment and Payment Document Creation ---
+    if (
+      registration.paymentMethod === 'credit-card' &&
+      registration.stripePaymentMethodId &&
+      registration.stripeCustomerId
+    ) {
+      const stripe = require('./helpers/stripe-client').stripe;
+      const Payment = require('../models/payment').default;
+      const paymentMethodId = registration.stripePaymentMethodId;
+      const stripeCustomerId = registration.stripeCustomerId;
+
+      try {
+        await stripe.paymentMethods.attach(paymentMethodId, { customer: stripeCustomerId });
+      } catch (err: any) {
+        if (err.code !== 'resource_already_attached') {
+          throw err;
+        }
+      }
+     
+      await stripe.customers.update(stripeCustomerId, {
+        invoice_settings: { default_payment_method: paymentMethodId }
+      });
+
+      const paymentMethod = await stripe.paymentMethods.retrieve(paymentMethodId);
+      if (paymentMethod.type === 'card' && paymentMethod.card) {
+        const existingPayments = await Payment.countDocuments({ userId: savedParent._id });
+        const isDefault = existingPayments === 0;
+        
+        const paymentDoc = new Payment({
+          userId: savedParent._id,
+          last4: paymentMethod.card.last4,
+          expirationDate: `${paymentMethod.card.exp_month}/${paymentMethod.card.exp_year}`,
+          cardType: paymentMethod.card.brand,
+          isDefault,
+          stripePaymentMethodId: paymentMethodId
+        });
+        await paymentDoc.save({ session });
+      }
+    }
+
+    
+    const parentUser = savedParent as import('../models/user').IUser;
+    const parentObjectId = parentUser._id as mongoose.Types.ObjectId;
+
     const { user: savedStudent, username, email } = await createStudentUser(
       registration.studentFirstName,
       registration.studentLastName,
       registration.studentDOB,
-      savedParent._id,
+      parentObjectId,
       password,
       session
     );
 
+    if (Array.isArray(parentUser.students)) {
+      parentUser.students.push(savedStudent._id as mongoose.Types.ObjectId);
+    } else {
+      parentUser.students = [savedStudent._id as mongoose.Types.ObjectId];
+    }
+    await parentUser.save({ session });
+
     console.log("Student user created successfully", savedStudent);
-
-
-    savedParent.students = [savedStudent._id];
-    await savedParent.save({ session });
 
     const program = await Program.findById(registration.programId).populate('modules');
     if (!program) {
@@ -253,13 +291,14 @@ export const createPortalAccount = async (req: Request, res: Response) => {
 
     const modules = await Module.find({ _id: { $in: program.modules } }).populate('topics');
 
-    const moduleProgressPromises = modules.map(module => {
+    const moduleProgressPromises = modules.map((module: any) => {
+      const totalTopics = Array.isArray(module.topics) ? module.topics.length : 0;
       return new ModuleProgress({
         studentId: savedStudent._id,
         moduleId: module._id,
         programId: registration.programId,
         completedTopics: 0,
-        totalTopics: module.topics.length,
+        totalTopics,
         completionPercentage: 0,
         lastUpdatedAt: new Date(),
         marks: 0
@@ -307,8 +346,6 @@ export const createPortalAccount = async (req: Request, res: Response) => {
   } catch (error) {
     await session.abortTransaction();
     session.endSession();
-    console.error("Error creating additional student:", error);
-    console.log(error);
     console.error("Error creating portal account:", error);
     return res.status(500).json({
       message: "Failed to create account",
@@ -338,22 +375,21 @@ export const createAdditionalStudent = async (req: Request, res: Response) => {
       return res.status(404).json({ message: "Program not found" });
     }
 
-
+    
     const { user: savedStudent, username, email } = await createStudentUser(
       studentFirstName,
       studentLastName,
       studentDOB,
       parentId,
-      //password,
+      '',
       session
     );
 
-    // Create enrollment
+    
     const enrollment = new Enrollment({
       programId,
       studentId: savedStudent._id,
       parentId,
-      //offeringType: classSessions?.length > 10 ? 'Marathon' : 'Sprint', // Example logic
       paymentMethod: 'manual',
       paymentStatus: 'pending',
       programFee: program.price,
@@ -401,14 +437,12 @@ export const createAdditionalStudent = async (req: Request, res: Response) => {
     await session.abortTransaction();
     session.endSession();
     console.error("Error creating additional student:", error);
-    console.log(error);
     return res.status(500).json({
       message: "Failed to create additional student",
       error: (error as Error).message
     });
   }
 };
-
 
 async function getSessionDay(sessionId: string): Promise<string | null> {
   try {

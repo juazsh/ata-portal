@@ -1,5 +1,5 @@
 import mongoose, { Schema, Document } from 'mongoose';
-import bcrypt from 'bcrypt';
+import { hashPassword, comparePassword, isPasswordHashed } from '../utils/password-utils';
 
 export enum UserRole {
   OWNER = 'owner',
@@ -59,7 +59,6 @@ export interface IUser extends Document {
   active: boolean;
   stripeCustomerId?: string;
 
-  // Student-specific fields
   location?: string;
   level?: string;
   progress?: number;
@@ -151,7 +150,6 @@ const UserSchema = new Schema<IUser>(
     active: { type: Boolean, default: true },
     stripeCustomerId: { type: String, required: false },
 
-    // Student-specific fields
     location: { type: String, required: false },
     level: { type: String, required: false },
     progress: { type: Number, required: false, default: 0 },
@@ -166,12 +164,13 @@ const UserSchema = new Schema<IUser>(
 
 UserSchema.pre('save', async function (next) {
   if (!this.isModified('password')) return next();
-
   try {
-    // Generate a salt
-    const salt = await bcrypt.genSalt(10);
-    // Hash the password along with the new salt
-    this.password = await bcrypt.hash(this.password, salt);
+    if (!isPasswordHashed(this.password)) {
+      console.log('Hashing password in pre-save hook');
+      this.password = await hashPassword(this.password);
+    } else {
+      console.log('Password already hashed, skipping hash in pre-save hook');
+    }
     next();
   } catch (error: any) {
     next(error);
@@ -179,7 +178,18 @@ UserSchema.pre('save', async function (next) {
 });
 
 UserSchema.methods.comparePassword = async function (candidatePassword: string): Promise<boolean> {
-  return bcrypt.compare(candidatePassword, this.password);
+  console.log("Comparing password for user:", this.email);
+  console.log("Candidate password length:", candidatePassword.length);
+  console.log("Stored hash length:", this.password.length);
+  
+  try {
+    const result = await comparePassword(candidatePassword, this.password);
+    console.log("Password comparison result:", result);
+    return result;
+  } catch (error) {
+    console.error("Error comparing password:", error);
+    return false;
+  }
 };
 
 const User = mongoose.models.User || mongoose.model<IUser>('User', UserSchema);

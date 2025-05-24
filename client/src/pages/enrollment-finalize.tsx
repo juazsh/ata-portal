@@ -11,7 +11,6 @@ import { Button } from "@/components/ui/button"
 import { CheckCircle } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import logoImage from "@/assets/images/new_logo.png";
-
 import { EnrollmentDetails } from "@/components/enrollment/enrollment-details"
 import { ParentInfoForm } from "@/components/enrollment/parent-info-form"
 import { StudentInfoForm } from "@/components/enrollment/student-info-form"
@@ -53,6 +52,8 @@ const FinalizeEnrollment = () => {
     cardExpiry: "",
     cardCVC: "",
     enrollmentDate: undefined,
+    stripePaymentMethodId: "",
+    stripeCustomerId: "",
   })
 
   const [isLoading, setIsLoading] = useState(false)
@@ -165,6 +166,8 @@ const FinalizeEnrollment = () => {
         totalAmountDue,
         discountCode: discountCode || undefined,
 
+        stripePaymentMethodId: formData.stripePaymentMethodId,
+        stripeCustomerId: formData.stripeCustomerId,
 
         isRegistrationComplete: false,
         isRegLinkedWithEnrollment: false,
@@ -415,8 +418,13 @@ const FinalizeEnrollment = () => {
                   </TabsContent>
 
                   <TabsContent value="parent" className="space-y-6">
-                    <ParentInfoForm formData={formData} handleChange={handleChange} setActiveTab={setActiveTab}
-                      onExistingUserDetected={handleExistingUserDetected} />
+                    <ParentInfoForm 
+                      formData={formData} 
+                      handleChange={handleChange} 
+                      setActiveTab={setActiveTab}
+                      onExistingUserDetected={handleExistingUserDetected}
+                      setFormData={setFormData}
+                    />
                   </TabsContent>
 
                   <TabsContent value="child" className="space-y-6">

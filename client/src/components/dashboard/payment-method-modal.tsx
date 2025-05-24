@@ -14,10 +14,11 @@ declare global {
 interface PaymentMethodModalProps {
   open: boolean;
   onOpenChange: (open: boolean) => void;
-  onSuccess: () => void;
+  onSuccess: (paymentMethodId: string) => void;
+  customerId?: string;
 }
 
-export function PaymentMethodModal({ open, onOpenChange, onSuccess }: PaymentMethodModalProps) {
+export function PaymentMethodModal({ open, onOpenChange, onSuccess, customerId }: PaymentMethodModalProps) {
   const { toast } = useToast();
   const { user } = useAuth();
   const [isLoading, setIsLoading] = useState(false);
@@ -214,15 +215,6 @@ export function PaymentMethodModal({ open, onOpenChange, onSuccess }: PaymentMet
     console.log("HandleSubmit: Starting submission...");
 
 
-    if (!user?.id) {
-      console.error("Submit Error: No user ID");
-      toast({
-        title: "Authentication Error",
-        description: "User information is missing. Please log in again.",
-        variant: "destructive",
-      });
-      return;
-    }
     if (!stripe || !elements || !cardElementRef.current) {
       console.error("Submit Error: Stripe not ready");
       toast({
@@ -237,7 +229,7 @@ export function PaymentMethodModal({ open, onOpenChange, onSuccess }: PaymentMet
       toast({
         title: "Card Error",
         description: cardError, // >> Display the existing card error message
-        variant: "warning", // >> Use warning or destructive based on severity
+        variant: "default", // Use default for warning/info
       });
       return;
     }
@@ -246,7 +238,7 @@ export function PaymentMethodModal({ open, onOpenChange, onSuccess }: PaymentMet
       toast({
         title: "Incomplete Details",
         description: "Please ensure all card details are filled correctly.",
-        variant: "warning",
+        variant: "default",
       });
       return;
     }
@@ -267,40 +259,49 @@ export function PaymentMethodModal({ open, onOpenChange, onSuccess }: PaymentMet
 
       if (error) {
         console.error("Submit Error: createPaymentMethod failed", error);
-
         throw new Error(error.message || "Failed to create payment method.");
       }
       console.log("HandleSubmit: Payment method created:", paymentMethod.id);
 
-      const token = localStorage.getItem('auth_token');
-      if (!token) {
-        throw new Error("Authentication token not found. Please log in again.");
+      // If user is logged in, attach payment method to user as before
+      if (user?.id && !customerId) {
+        const token = localStorage.getItem('auth_token');
+        if (!token) {
+          throw new Error("Authentication token not found. Please log in again.");
+        }
+        console.log("HandleSubmit: Sending to /api/payments...");
+        const response = await fetch('/api/payments', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${token}`
+          },
+          body: JSON.stringify({
+            paymentMethodId: paymentMethod.id,
+            userId: user.id
+          })
+        });
+        const responseData = await response.json();
+        if (!response.ok) {
+          console.error("Submit Error: Server failed", responseData);
+          throw new Error(responseData.message || `Server error: ${response.status}`);
+        }
+        console.log("HandleSubmit: Success!");
+        toast({
+          title: "Success",
+          description: "Payment method added successfully!",
+        });
+        onSuccess(paymentMethod.id);
+        onOpenChange(false);
+      } else if (customerId) {
+        // If customerId is provided (user not logged in), just return the paymentMethodId
+        onSuccess(paymentMethod.id);
+        onOpenChange(false);
+      } else {
+        // Fallback: just return the paymentMethodId
+        onSuccess(paymentMethod.id);
+        onOpenChange(false);
       }
-      console.log("HandleSubmit: Sending to /api/payments...");
-      const response = await fetch('/api/payments', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'Authorization': `Bearer ${token}`
-        },
-        body: JSON.stringify({
-          paymentMethodId: paymentMethod.id,
-          userId: user.id
-        })
-      });
-      const responseData = await response.json();
-      if (!response.ok) {
-        console.error("Submit Error: Server failed", responseData);
-        throw new Error(responseData.message || `Server error: ${response.status}`);
-      }
-
-      console.log("HandleSubmit: Success!");
-      toast({
-        title: "Success",
-        description: "Payment method added successfully!",
-      });
-      onSuccess();
-      onOpenChange(false);
 
     } catch (error: any) {
       console.error("HandleSubmit: Error during submission:", error);

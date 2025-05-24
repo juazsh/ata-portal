@@ -18,6 +18,7 @@ import { registerEnrollmentRoutes } from "./routes/enrollments";
 import { registerDiscountCodeRoutes } from "./routes/discount-codes";
 import { registerPayPalRoutes } from "./routes/paypal";
 import { registerPasswordResetRoutes } from "./routes/password-reset";
+import transactionsRouter from './routes/transactions';
 
 export async function registerRoutes(app: Express): Promise<Server> {
   const { isAuthenticated, hasRole } = await setupAuth(app);
@@ -39,6 +40,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
   registerEnrollmentRoutes(app, isAuthenticated, hasRole);
   registerDiscountCodeRoutes(app, isAuthenticated, hasRole);
   registerPayPalRoutes(app, isAuthenticated);
+  app.use('/api/transactions', transactionsRouter);
   
   const httpServer = createServer(app);
   return httpServer;

@@ -2,13 +2,13 @@ import passport from "passport";
 import { Strategy as LocalStrategy } from "passport-local";
 import { Strategy as JwtStrategy, ExtractJwt } from "passport-jwt";
 import { Express, Request, Response, NextFunction } from "express";
-import bcrypt from "bcrypt";
 import jwt from "jsonwebtoken";
 import { ZodError } from "zod";
 import { fromZodError } from "zod-validation-error";
 import { connectToDatabase, User } from "./lib/mongodb";
 import { loginUserSchema } from "@shared/schema";
 import { UserRole } from "./models/user";
+import { hashPassword } from "./utils/password-utils";
 
 const JWT_SECRET = process.env.JWT_SECRET || "fusionmind-jwt-secret-key";
 const JWT_EXPIRES_IN = process.env.JWT_EXPIRES_IN || "24h";
@@ -25,12 +25,6 @@ declare global {
       profilePicture?: string;
     }
   }
-}
-
-// >> Password hashing
-async function hashPassword(password: string): Promise<string> {
-  const saltRounds = 10;
-  return bcrypt.hash(password, saltRounds);
 }
 
 // >> Generate JWT token
@@ -141,7 +135,7 @@ export async function setupAuth(app: Express) {
             return done(null, false, { message: "Account is deactivated" });
           }
 
-          console.log("[auth] User found, comparing passwords");
+          console.log("[auth] Comparing password...");
           const isValidPassword = await user.comparePassword(password);
 
           if (!isValidPassword) {
@@ -182,14 +176,11 @@ export async function setupAuth(app: Express) {
       if (existingUser) {
         return res.status(400).json({ message: "Email already registered" });
       }
-
-      const hashedPassword = await hashPassword(password);
-
       const newUser = new User({
         firstName,
         lastName,
         email,
-        password: hashedPassword,
+        password,
         role: role || UserRole.PARENT,
         active: true,
         profilePicture: req.body.profilePicture || `https://ui-avatars.com/api/?name=${encodeURIComponent(firstName + '+' + lastName)}&background=3b82f6&color=ffffff`

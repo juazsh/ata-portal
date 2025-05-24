@@ -164,3 +164,17 @@ export const getPaymentMethods = async (req: Request, res: Response) => {
     res.status(500).json({ message: 'Failed to get payment methods' });
   }
 };
+
+export const createStripeCustomer = async (req: Request, res: Response) => {
+  try {
+    const { email, name } = req.body;
+    if (!email || !name) {
+      return res.status(400).json({ message: 'Missing email or name' });
+    }
+    const customer = await stripe.customers.create({ email, name });
+    res.status(201).json({ customerId: customer.id });
+  } catch (error) {
+    console.error('Failed to create Stripe customer:', error);
+    res.status(500).json({ message: 'Failed to create Stripe customer' });
+  }
+};
