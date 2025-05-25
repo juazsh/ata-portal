@@ -52,7 +52,7 @@ export const processStripePayment = async (user: any, enrollment: any, paymentMe
           price_data: {
             currency: 'usd',
             product: 'prod_SBGrHDgAI2y5rf',
-            unit_amount: Math.round(enrollment.totalAmount * 100),
+            unit_amount: Math.round(enrollment.monthlyAmount * 100),
             recurring: {
               interval: 'month',
             },
@@ -88,7 +88,7 @@ export const processStripePayment = async (user: any, enrollment: any, paymentMe
 
     return res.status(200).json({
       success: true,
-      message: 'Stripe subscription created successfully',
+      message: 'Your payment was successful',
       enrollment: updatedEnrollment
     });
   } else {

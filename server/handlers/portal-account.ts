@@ -237,17 +237,21 @@ export const createPortalAccount = async (req: Request, res: Response) => {
       enrollmentData.monthlyAmount = program.price;
       enrollmentData.subscriptionId = registration.paypalSubscriptionId || registration.stripeSubscriptionId || 'PENDING';
       enrollmentData.nextPaymentDue = registration.nextPaymentDate;
-      enrollmentData.paymentHistory = [];
+      enrollmentData.paymentTransactionId = registration.paymentTransactionId
     } else {
       enrollmentData.paymentDate = registration.paymentDate;
       enrollmentData.paymentTransactionId = registration.paypalOrderId || registration.stripePaymentIntentId || 'PENDING';
     }
-
+    const firstPayment = {amount: registration.totalAmountDue, 
+      date: registration.paymentDate, 
+      status: 'completed', 
+      processor: registration.paymentProcessor,
+      transactionId: registration.paymentTransactionId,
+     }
+    enrollmentData.paymentHistory = [firstPayment];
     const enrollment = new Enrollment(enrollmentData);
     await enrollment.save({ session });
-
     console.log("Enrollment created successfully", enrollment);
-
     const programProgress = new ProgramProgress({
       studentId: savedStudent._id,
       programId: registration.programId,

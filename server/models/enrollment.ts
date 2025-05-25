@@ -19,6 +19,7 @@ export interface IEnrollment extends Document {
     amount: number;
     date: Date;
     status: string;
+    processor: string;
     transactionId: string;
   }[];
   paymentDate?: Date;
@@ -89,6 +90,7 @@ const EnrollmentSchema = new Schema<IEnrollment>(
         enum: ['pending', 'completed', 'failed', 'refunded'],
         required: true
       },
+      processor: { type: String },
       transactionId: { type: String, required: true }
     }],
     paymentDate: {

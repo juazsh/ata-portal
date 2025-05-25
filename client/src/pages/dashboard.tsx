@@ -31,6 +31,34 @@ import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { useToast } from "@/hooks/use-toast";
 import { StudentManagement } from "@/components/dashboard/student-management";
 import ClassSessionsPage from "@/components/class-session/class-session-page";
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+
+// Types
+interface PaymentMethod {
+  id: string;
+  last4: string;
+  expirationDate: string;
+  cardType: string;
+  isDefault: boolean;
+  cardholderName?: string;
+}
+
+interface Enrollment {
+  _id: string;
+  programId: { name: string } | string;
+  monthlyAmount?: number;
+  paymentHistory?: { amount: number; date: string; status: string; transactionId: string }[];
+}
+
+interface Student {
+  _id: string;
+  firstName: string;
+  lastName: string;
+  location?: string;
+  enrolledProgram?: string;
+  level?: string;
+  progress?: number;
+}
 
 function getAuthHeaders() {
   const token = localStorage.getItem('auth_token');
@@ -114,7 +142,7 @@ export default function Dashboard() {
 function HomePage() {
   const { user } = useAuth();
   const [isLoading, setIsLoading] = useState(true);
-  const [students, setStudents] = useState([]);
+  const [students, setStudents] = useState<Student[]>([]);
   const { toast } = useToast();
   const isParent = user?.role === 'parent';
 
@@ -411,16 +439,20 @@ function PaymentInfoPage() {
   const { user } = useAuth();
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(true);
-  const [paymentMethods, setPaymentMethods] = useState([]);
+  const [paymentMethods, setPaymentMethods] = useState<PaymentMethod[]>([]);
   const { toast } = useToast();
-  const [confirmRemove, setConfirmRemove] = useState({
-    open: false,
-    id: null,
-  });
+  const [confirmRemove, setConfirmRemove] = useState<{ open: boolean; id: string | null }>({ open: false, id: null });
+  const [showDeleteDefaultModal, setShowDeleteDefaultModal] = useState(false);
+  const [enrollments, setEnrollments] = useState<Enrollment[]>([]);
+  const [makePaymentModal, setMakePaymentModal] = useState<{ open: boolean; enrollment: Enrollment | null }>({ open: false, enrollment: null });
+  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<string | null>(null);
+  const [isPaying, setIsPaying] = useState(false);
+  const [, navigate] = useLocation();
 
   useEffect(() => {
     if (user?.id) {
       fetchPaymentMethods();
+      fetchEnrollments();
     } else {
       setIsLoading(false);
     }
@@ -461,8 +493,28 @@ function PaymentInfoPage() {
     }
   };
 
+  const fetchEnrollments = async () => {
+    if (!user?.id) return;
+    try {
+      const token = localStorage.getItem('auth_token');
+      if (!token) return;
+      const response = await fetch('/api/enrollments', {
+        headers: { 'Authorization': `Bearer ${token}` }
+      });
+      const data = await response.json();
+      if (data.success) setEnrollments(data.enrollments);
+    } catch (e) {
+      toast({ title: 'Error', description: 'Failed to load enrollments', variant: 'destructive' });
+    }
+  };
+
   const handleRemovePaymentMethod = async () => {
     if (!confirmRemove.id) return;
+    if (paymentMethods.length === 1) {
+      setConfirmRemove({ open: false, id: null });
+      setShowDeleteDefaultModal(true);
+      return;
+    }
 
     try {
       const token = localStorage.getItem('auth_token');
@@ -499,6 +551,44 @@ function PaymentInfoPage() {
       });
     } finally {
       setConfirmRemove({ open: false, id: null });
+    }
+  };
+
+  const handleMakePayment = (enrollment: Enrollment, amount: number) => {
+    if (amount <= 0) {
+      toast({ title: 'No Outstanding', description: 'No outstanding amount to pay.', variant: 'default' });
+      return;
+    }
+    setSelectedPaymentMethod(paymentMethods.find(m => m.isDefault)?.id || null);
+    setMakePaymentModal({ open: true, enrollment });
+  };
+
+  const confirmMakePayment = async () => {
+    if (!makePaymentModal.enrollment || !selectedPaymentMethod || !user?.id) return;
+    setIsPaying(true);
+    try {
+      console.log(paymentMethods)
+      const method = paymentMethods.find(m => m.id === selectedPaymentMethod);
+      if (!method) throw new Error('No payment method selected');
+      const token = localStorage.getItem('auth_token');
+      const response = await fetch(`/api/enrollments/${makePaymentModal.enrollment._id}/process-payment`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'Authorization': `Bearer ${token}` },
+        body: JSON.stringify({
+          enrollmentId: makePaymentModal.enrollment._id,
+          paymentMethodId: method.id,
+          paymentProcessor: 'stripe',
+        })
+      });
+      const data = await response.json();
+      if (!response.ok) throw new Error(data.message || 'Payment failed');
+      toast({ title: 'Payment Success', description: data.message || 'Payment processed.' });
+      setMakePaymentModal({ open: false, enrollment: null });
+      fetchEnrollments();
+    } catch (e: any) {
+      toast({ title: 'Payment Error', description: e.message || 'Failed to process payment', variant: 'destructive' });
+    } finally {
+      setIsPaying(false);
     }
   };
 
@@ -616,35 +706,43 @@ function PaymentInfoPage() {
             </CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="grid grid-cols-1 mb-4">
-              <div className="p-4 bg-slate-50 dark:bg-slate-800 rounded-md">
-                <h3 className="text-sm font-medium text-slate-500 dark:text-slate-400">Outstanding</h3>
-                <p className="text-xl font-semibold mb-2">$350.00</p>
-                <Button size="sm" className="w-full">Make Payment</Button>
-              </div>
-              {/* <div className="p-4 bg-slate-50 dark:bg-slate-800 rounded-md">
-                <h3 className="text-sm font-medium text-slate-500 dark:text-slate-400">Credit</h3>
-                <p className="text-xl font-semibold mb-2">$50.00</p>
-                <Button size="sm" variant="outline" className="w-full">Add Credit</Button>
-              </div> */}
-            </div>
-
-            <div className="mb-4">
-              <h3 className="text-sm font-medium text-slate-500 dark:text-slate-400 mb-2">Recent Transactions</h3>
-              <div className="space-y-3">
-                <div className="p-3 bg-slate-50 dark:bg-slate-800 rounded-md">
-                  <div className="flex justify-between items-center">
-                    <div>
-                      <p className="font-medium">Tuition Fee</p>
-                      <p className="text-sm text-slate-500 dark:text-slate-400">March 15, 2025</p>
+            {enrollments.length === 0 ? (
+              <div className="p-4 bg-slate-50 dark:bg-slate-800 rounded-md text-center">No enrollments found.</div>
+            ) : (
+              enrollments.map((enrollment) => {
+                const today = new Date();
+                const outstanding = today.getDate() > 20 && enrollment.monthlyAmount ? enrollment.monthlyAmount : 0.0;
+                const paymentHistory = (enrollment.paymentHistory || []).slice(-2).reverse();
+                return (
+                  <div key={enrollment._id} className="mb-6 border-b pb-6 last:border-b-0 last:pb-0">
+                    <div className="p-4 bg-slate-50 dark:bg-slate-800 rounded-md mb-2">
+                      <h3 className="text-sm font-medium text-slate-500 dark:text-slate-400">Outstanding for {typeof enrollment.programId === 'object' ? enrollment.programId.name : 'Program'}</h3>
+                      <p className="text-xl font-semibold mb-2">${outstanding.toFixed(2)}</p>
+                      <Button size="sm" className="w-full" onClick={() => handleMakePayment(enrollment, outstanding)}>Make Payment</Button>
                     </div>
-                    <p className="font-semibold">$250.00</p>
+                    <div className="mb-4">
+                      <h3 className="text-sm font-medium text-slate-500 dark:text-slate-400 mb-2">Recent Transactions</h3>
+                      <div className="space-y-3">
+                        {paymentHistory.length === 0 ? (
+                          <div className="p-3 bg-slate-50 dark:bg-slate-800 rounded-md text-center text-sm text-muted-foreground">No recent transactions.</div>
+                        ) : paymentHistory.map((tx, idx) => (
+                          <div key={idx} className="p-3 bg-slate-50 dark:bg-slate-800 rounded-md">
+                            <div className="flex justify-between items-center">
+                              <div>
+                                <p className="font-medium">{tx.status === 'completed' ? 'Tuition Fee' : 'Pending Payment'}</p>
+                                <p className="text-sm text-slate-500 dark:text-slate-400">{new Date(tx.date).toLocaleDateString()}</p>
+                              </div>
+                              <p className="font-semibold">${tx.amount.toFixed(2)}</p>
+                            </div>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
                   </div>
-                </div>
-              </div>
-            </div>
-
-            <Button variant="outline" className="w-full flex items-center justify-center gap-2">
+                );
+              })
+            )}
+            <Button variant="outline" className="w-full flex items-center justify-center gap-2 mt-2" onClick={() => navigate('/transaction-history')}>
               <HistoryIcon className="h-4 w-4" />
               View All Transactions
             </Button>
@@ -666,24 +764,83 @@ function PaymentInfoPage() {
         confirmText="Remove"
         onConfirm={handleRemovePaymentMethod}
       />
+      <ConfirmDialog
+        open={showDeleteDefaultModal}
+        onOpenChange={setShowDeleteDefaultModal}
+        title="Cannot Delete Default Payment Method"
+        description="Can't delete the default payment method. Add another card, make it default and then delete this."
+        confirmText="OK"
+        onConfirm={() => setShowDeleteDefaultModal(false)}
+        hideCancel
+      />
+      <Dialog open={makePaymentModal.open} onOpenChange={(open) => setMakePaymentModal({ ...makePaymentModal, open })}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Confirm Payment</DialogTitle>
+            <DialogDescription>
+              <div className="mb-4">
+                <div className="mb-2">Select a payment method:</div>
+                <div className="space-y-2">
+                  {paymentMethods.map((method) => (
+                    <div key={method.id} className={`flex items-center gap-2 p-2 rounded border ${selectedPaymentMethod === method.id ? 'border-primary' : 'border-slate-200'}`}
+                      onClick={() => setSelectedPaymentMethod(method.id)}
+                      style={{ cursor: 'pointer' }}
+                    >
+                      <input type="radio" checked={selectedPaymentMethod === method.id} onChange={() => setSelectedPaymentMethod(method.id)} />
+                      <span>{method.cardType} •••• {method.last4} (exp {method.expirationDate}) {method.isDefault && <span className="ml-1 text-xs text-primary">Default</span>}</span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+              You are about to pay for <span className="font-bold">{makePaymentModal.enrollment?.programId && typeof makePaymentModal.enrollment.programId === 'object' ? makePaymentModal.enrollment.programId.name : 'Program'}</span>.<br />
+              The selected payment method will be used.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex gap-2 mt-4">
+            <Button onClick={confirmMakePayment} disabled={isPaying || !selectedPaymentMethod} className="w-full">
+              {isPaying ? 'Processing...' : 'Pay'}
+            </Button>
+            <Button variant="outline" onClick={() => setMakePaymentModal({ open: false, enrollment: null })} className="w-full">Cancel</Button>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
 
 
 function TransactionHistoryPage() {
+  const { user } = useAuth();
+  const [enrollments, setEnrollments] = useState<Enrollment[]>([]);
+  const { toast } = useToast();
+  useEffect(() => {
+    const fetchEnrollments = async () => {
+      if (!user?.id) return;
+      try {
+        const token = localStorage.getItem('auth_token');
+        if (!token) return;
+        const response = await fetch('/api/enrollments', {
+          headers: { 'Authorization': `Bearer ${token}` }
+        });
+        const data = await response.json();
+        if (data.success) setEnrollments(data.enrollments);
+      } catch (e) {
+        toast({ title: 'Error', description: 'Failed to load enrollments', variant: 'destructive' });
+      }
+    };
+    fetchEnrollments();
+  }, [user?.id, toast]);
   return (
     <div className="px-4 py-6 sm:px-6 lg:px-8">
       <PageHeader
         title="Transaction History"
         description="View your complete payment history and transaction details"
       >
-        <Button variant="outline" className="flex items-center gap-2">
+        {/* <Button variant="outline" className="flex items-center gap-2" style={{ display: 'none' }}>
           <HistoryIcon className="h-4 w-4" />
           Export History
-        </Button>
+        </Button> */}
       </PageHeader>
-
       <Card className="mt-6">
         <CardHeader>
           <CardTitle>Payment History</CardTitle>
@@ -692,10 +849,32 @@ function TransactionHistoryPage() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="p-4 bg-slate-100 dark:bg-slate-800 rounded-lg text-center">
-            <HistoryIcon className="h-12 w-12 mx-auto text-primary mb-2" />
-            <p>Transaction history will appear here</p>
-          </div>
+          {enrollments.length === 0 ? (
+            <div className="p-4 bg-slate-100 dark:bg-slate-800 rounded-lg text-center">No enrollments found.</div>
+          ) : (
+            enrollments.map((enrollment) => (
+              <div key={enrollment._id} className="mb-6 border-b pb-6 last:border-b-0 last:pb-0">
+                <div className="mb-2 font-semibold">{typeof enrollment.programId === 'object' ? enrollment.programId.name : 'Program'}</div>
+                <div className="space-y-3">
+                  {(enrollment.paymentHistory || []).length === 0 ? (
+                    <div className="p-3 bg-slate-50 dark:bg-slate-800 rounded-md text-center text-sm text-muted-foreground">No transactions.</div>
+                  ) : (
+                    (enrollment.paymentHistory || []).slice().reverse().map((tx, idx) => (
+                      <div key={idx} className="p-3 bg-slate-50 dark:bg-slate-800 rounded-md">
+                        <div className="flex justify-between items-center">
+                          <div>
+                            <p className="font-medium">{tx.status === 'completed' ? 'Tuition Fee' : 'Pending Payment'}</p>
+                            <p className="text-sm text-slate-500 dark:text-slate-400">{new Date(tx.date).toLocaleDateString()}</p>
+                          </div>
+                          <p className="font-semibold">${tx.amount.toFixed(2)}</p>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+            ))
+          )}
         </CardContent>
       </Card>
     </div>
