@@ -137,12 +137,20 @@ const FinalizeEnrollment = () => {
         setIsLoading(false)
         return
       }
-
+      if (formData.paymentMethod === "credit-card" && !formData.stripePaymentMethodId) {
+        setError("Please add a credit card before completing enrollment.");
+        setIsLoading(false);
+        return;
+      }
+      if (!formData.paymentMethod) {
+        setError("Please select a payment method before completing enrollment.");
+        setIsLoading(false);
+        return;
+      }
       const firstPaymentAmount = getFirstPaymentAmount()
       const adminFee = getAdminFee()
       const taxAmount = getTaxAmount()
       const totalAmountDue = getTotalAmountDue()
-
 
       const registrationData = {
         parentFirstName: formData.parentFirstName,
@@ -183,7 +191,6 @@ const FinalizeEnrollment = () => {
       })
 
       const data = await response.json()
-
 
       if (response.status === 409) {
         setShowExistingUserModal(true)

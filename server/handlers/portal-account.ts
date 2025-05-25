@@ -9,6 +9,7 @@ import { sendMail } from "../services/email";
 import { getPortalAccountEmailTemplate } from "../utils/portal-account-email-templates";
 import { updateSessionCapacity } from "./class-sessions";
 import { ClassSession } from '../models/class-session';
+import { addStripePaymentForUser } from "./payment";
 
 async function createParentUser(
   registration: any,
@@ -31,8 +32,11 @@ async function createParentUser(
       country: address.country
     },
     role: UserRole.PARENT,
-    active: true
+    active: true,
   });
+  registration.paymentProcessor == 'stripe' 
+  ? parentUser.stripeCustomerId = registration.stripeCustomerId
+  : parentUser.paypalPayerId = registration.paypalPayerId;
   return await parentUser.save({ session });
 }
 
@@ -180,48 +184,14 @@ export const createPortalAccount = async (req: Request, res: Response) => {
       session
     );
 
+
+    await addStripePaymentForUser(savedParent._id as string,
+      registration.stripeCustomerId, 
+      registration.stripePaymentMethodId,
+      true,
+      session);
+
     console.log("Parent user created successfully", savedParent);
-
-    // --- Stripe Payment Method Attachment and Payment Document Creation ---
-    if (
-      registration.paymentMethod === 'credit-card' &&
-      registration.stripePaymentMethodId &&
-      registration.stripeCustomerId
-    ) {
-      const stripe = require('./helpers/stripe-client').stripe;
-      const Payment = require('../models/payment').default;
-      const paymentMethodId = registration.stripePaymentMethodId;
-      const stripeCustomerId = registration.stripeCustomerId;
-
-      try {
-        await stripe.paymentMethods.attach(paymentMethodId, { customer: stripeCustomerId });
-      } catch (err: any) {
-        if (err.code !== 'resource_already_attached') {
-          throw err;
-        }
-      }
-     
-      await stripe.customers.update(stripeCustomerId, {
-        invoice_settings: { default_payment_method: paymentMethodId }
-      });
-
-      const paymentMethod = await stripe.paymentMethods.retrieve(paymentMethodId);
-      if (paymentMethod.type === 'card' && paymentMethod.card) {
-        const existingPayments = await Payment.countDocuments({ userId: savedParent._id });
-        const isDefault = existingPayments === 0;
-        
-        const paymentDoc = new Payment({
-          userId: savedParent._id,
-          last4: paymentMethod.card.last4,
-          expirationDate: `${paymentMethod.card.exp_month}/${paymentMethod.card.exp_year}`,
-          cardType: paymentMethod.card.brand,
-          isDefault,
-          stripePaymentMethodId: paymentMethodId
-        });
-        await paymentDoc.save({ session });
-      }
-    }
-
     
     const parentUser = savedParent as import('../models/user').IUser;
     const parentObjectId = parentUser._id as mongoose.Types.ObjectId;
@@ -266,10 +236,10 @@ export const createPortalAccount = async (req: Request, res: Response) => {
     if (enrollmentData.offeringType === 'Marathon') {
       enrollmentData.monthlyAmount = program.price;
       enrollmentData.subscriptionId = registration.paypalSubscriptionId || registration.stripeSubscriptionId || 'PENDING';
-      enrollmentData.nextPaymentDue = new Date();
+      enrollmentData.nextPaymentDue = registration.nextPaymentDate;
       enrollmentData.paymentHistory = [];
     } else {
-      enrollmentData.paymentDate = new Date();
+      enrollmentData.paymentDate = registration.paymentDate;
       enrollmentData.paymentTransactionId = registration.paypalOrderId || registration.stripePaymentIntentId || 'PENDING';
     }
 

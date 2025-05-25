@@ -5,6 +5,8 @@ import express, { type Request, Response, NextFunction } from "express";
 import { registerRoutes } from "./routes";
 import { setupVite, serveStatic, log } from "./vite";
 import cors from "cors";
+import mongoose from 'mongoose';
+import { loadInMemoryStore } from './in-memory/loader';
 
 const app = express();
 app.use(express.json());
@@ -80,4 +82,16 @@ app.use((req, res, next) => {
   }, () => {
     log(`serving on port ${port}`);
   });
+  
+  mongoose
+    .connect(process.env.MONGODB_URI!, { dbName: process.env.DB_NAME })
+    .then(async () => {
+      console.log('Connected to MongoDB');
+      await loadInMemoryStore();
+      console.log('In-memory store loaded.');
+    })
+    .catch((err) => {
+      console.error('Failed to connect to MongoDB', err);
+      process.exit(1);
+    });
 })();

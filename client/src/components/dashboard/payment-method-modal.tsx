@@ -212,6 +212,7 @@ export function PaymentMethodModal({ open, onOpenChange, onSuccess, customerId }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
+    e.stopPropagation();
     console.log("HandleSubmit: Starting submission...");
 
 
@@ -294,11 +295,9 @@ export function PaymentMethodModal({ open, onOpenChange, onSuccess, customerId }
         onSuccess(paymentMethod.id);
         onOpenChange(false);
       } else if (customerId) {
-        // If customerId is provided (user not logged in), just return the paymentMethodId
         onSuccess(paymentMethod.id);
         onOpenChange(false);
       } else {
-        // Fallback: just return the paymentMethodId
         onSuccess(paymentMethod.id);
         onOpenChange(false);
       }

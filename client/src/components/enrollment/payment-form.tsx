@@ -40,11 +40,15 @@ export function PaymentForm({
 }: PaymentFormProps) {
   const [showDiscountField, setShowDiscountField] = useState(false);
   const [showStripeModal, setShowStripeModal] = useState(false);
+  const [paymentMethodSummary, setPaymentMethodSummary] = useState<string | null>(null);
 
   const handleStripeSuccess = (paymentMethodId: string) => {
-    setFormData({ ...formData, stripePaymentMethodId: paymentMethodId });
+    setFormData({ ...formData, stripePaymentMethodId: paymentMethodId, paymentMethod: "credit-card" });
+    setPaymentMethodSummary("Credit Card ending in ••••"); // You can update this to show last4 if available
     setShowStripeModal(false);
   };
+
+  const paymentSelected = !!formData.stripePaymentMethodId || formData.paymentMethod === "paypal";
 
   return (
     <>
@@ -94,31 +98,45 @@ export function PaymentForm({
 
       <div className="space-y-4">
         <h2 className="text-lg font-semibold text-slate-900 dark:text-slate-50">Payment Method</h2>
-
-        <div className="grid grid-cols-2 gap-4">
-          <Button
-            type="button"
-            variant={formData.paymentMethod === "paypal" ? "default" : "outline"}
-            className="flex items-center justify-center gap-2 py-6"
-            onClick={() => setFormData({ ...formData, paymentMethod: "paypal" })}
-          >
-            <PaypalIcon className="h-5 w-5" />
-            <span>PayPal</span>
-          </Button>
-
-          <Button
-            type="button"
-            variant={formData.paymentMethod === "credit-card" ? "default" : "outline"}
-            className="flex items-center justify-center gap-2 py-6"
-            onClick={() => {
-              setFormData({ ...formData, paymentMethod: "credit-card" });
-              setShowStripeModal(true);
-            }}
-          >
-            <CreditCardIcon className="h-5 w-5" />
-            <span>Credit Card</span>
-          </Button>
-        </div>
+        {!paymentSelected && (
+          <div className="grid grid-cols-2 gap-4">
+            <Button
+              type="button"
+              variant={formData.paymentMethod === "paypal" ? "default" : "outline"}
+              className="flex items-center justify-center gap-2 py-6"
+              onClick={() => setFormData({ ...formData, paymentMethod: "paypal" })}
+            >
+              <PaypalIcon className="h-5 w-5" />
+              <span>PayPal</span>
+            </Button>
+            <Button
+              type="button"
+              variant={formData.paymentMethod === "credit-card" ? "default" : "outline"}
+              className="flex items-center justify-center gap-2 py-6"
+              onClick={() => setShowStripeModal(true)}
+            >
+              <CreditCardIcon className="h-5 w-5" />
+              <span>Credit Card</span>
+            </Button>
+          </div>
+        )}
+        {formData.stripePaymentMethodId && (
+          <div className="flex items-center gap-3 bg-card border border-primary/30 rounded-xl px-4 py-3 mt-2">
+            <CreditCardIcon className="h-5 w-5 text-primary" />
+            <span className="text-text font-medium">Payment method selected: Credit Card</span>
+            <Button type="button" variant="ghost" size="sm" onClick={() => {
+              setFormData({ ...formData, stripePaymentMethodId: "", paymentMethod: "" });
+              setPaymentMethodSummary(null);
+            }}>Change</Button>
+          </div>
+        )}
+        {formData.paymentMethod === "paypal" && paymentSelected && (
+          <div className="flex items-center gap-3 bg-card border border-primary/30 rounded-xl px-4 py-3 mt-2">
+            <PaypalIcon className="h-5 w-5 text-primary" />
+            <span className="text-text font-medium">Payment method selected: PayPal</span>
+            <Button type="button" variant="ghost" size="sm" onClick={() => setFormData({ ...formData, paymentMethod: "" })}>Change</Button>
+          </div>
+        )}
       </div>
 
       <div className="flex justify-between mt-6">
@@ -126,21 +144,10 @@ export function PaymentForm({
           Back to Student Info
         </Button>
 
-        {formData.paymentMethod === "paypal" ? (
-          <Button
-            type="submit"
-            variant="outline"
-            className="flex items-center justify-center gap-2 bg-blue-600 text-white hover:bg-blue-700"
-            disabled={isLoading}
-          >
-            <PaypalIcon className="h-5 w-5" />
-            Pay with PayPal
-          </Button>
-        ) : (
-          <Button type="submit" disabled={isLoading || !formData.enrollmentDate} className="min-w-[150px]">
-            {isLoading ? "Processing..." : "Complete Enrollment"}
-          </Button>
-        )}
+        <Button type="submit" disabled={isLoading || !formData.enrollmentDate || (!formData.stripePaymentMethodId && formData.paymentMethod !== "paypal")}
+          className="min-w-[150px]">
+          {isLoading ? "Processing..." : "Complete Enrollment"}
+        </Button>
       </div>
       <PaymentMethodModal
         open={showStripeModal}

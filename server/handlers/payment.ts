@@ -3,10 +3,33 @@ import Stripe from 'stripe';
 import Payment from '../models/payment';
 import User from '../models/user';
 import { UserRole } from '../models/user';
+import { attachedNewPaymentToClientAccount, getPaymentMethod, setCustomerDefaultPaymentMethod } from './helpers/stripe-client';
+import mongoose from 'mongoose';
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || '', {
   apiVersion: '2025-03-31.basil',
 });
+
+export const addStripePaymentForUser = async (userId: string, stripCustomerId: string, paymentMethodId: string, isDefault: boolean = false, session: mongoose.ClientSession  | null = null ) => {
+  const paymentMethod = await getPaymentMethod(paymentMethodId);
+  if (paymentMethod.type !== 'card' || !paymentMethod.card) {
+    throw Error("Invalid payment method")
+  }
+  await attachedNewPaymentToClientAccount(stripCustomerId, paymentMethodId);
+  if(isDefault){
+    await setCustomerDefaultPaymentMethod(stripCustomerId, paymentMethodId);
+  }
+  const payment = new Payment({
+    userId,
+    last4: paymentMethod.card.last4,
+    expirationDate: `${paymentMethod.card.exp_month}/${paymentMethod.card.exp_year}`,
+    cardType: paymentMethod.card.brand,
+    isDefault,
+    stripePaymentMethodId: paymentMethodId
+  });
+  await payment.save({session});
+}
+
 
 export const addPayment = async (req: Request, res: Response) => {
   try {

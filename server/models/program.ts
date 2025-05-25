@@ -1,4 +1,5 @@
 import mongoose, { Schema, Document, Types } from "mongoose";
+import { InMemoryStore } from '../in-memory/InMemoryStore';
 
 
 export interface ITopic extends Document {
@@ -66,6 +67,17 @@ const ProgramSchema = new Schema<IProgram>(
   { timestamps: true }
 );
 
+// --- In-memory hooks for Program ---
+ProgramSchema.post('save', function (doc) {
+  InMemoryStore.getInstance().updateProgram(doc as IProgram);
+});
+ProgramSchema.post('findOneAndUpdate', function (doc) {
+  if (doc) InMemoryStore.getInstance().updateProgram(doc as IProgram);
+});
+ProgramSchema.post('findOneAndDelete', function (doc) {
+  if (doc) InMemoryStore.getInstance().removeProgram(String(doc._id));
+});
+
 export interface IOffering extends Document {
   name: string;
   description: string;
@@ -84,6 +96,16 @@ const OfferingSchema = new Schema<IOffering>(
   },
   { timestamps: true }
 );
+
+OfferingSchema.post('save', function (doc) {
+  InMemoryStore.getInstance().updateOffering(doc as IOffering);
+});
+OfferingSchema.post('findOneAndUpdate', function (doc) {
+  if (doc) InMemoryStore.getInstance().updateOffering(doc as IOffering);
+});
+OfferingSchema.post('findOneAndDelete', function (doc) {
+  if (doc) InMemoryStore.getInstance().removeOffering(String(doc._id));
+});
 
 export const Topic = mongoose.models.Topic || mongoose.model<ITopic>("Topic", TopicSchema);
 export const Module = mongoose.models.Module || mongoose.model<IModule>("Module", ModuleSchema);

@@ -2,9 +2,19 @@ import { Response } from 'express';
 import User from '../../models/user';
 import Enrollment from '../../models/enrollment';
 import Payment from '../../models/payment';
+import { createStripSubscription, createStripePayment, stripe } from './stripe-client';
 
 
-import { stripe } from './stripe-client';
+export const processGuestStripePayment = async (payment: any) : Promise<any> => {
+  const {stripeCustomerId, stripePaymentMethodId, stripeProductId, offeringType, amount } = payment;
+  if (offeringType === 'Marathon') {
+    const subscription = await createStripSubscription(stripeCustomerId, stripePaymentMethodId, stripeProductId, amount);
+    return {stripeSubscriptionId: subscription.id, stripeTransactionId: subscription.latest_invoice as string};
+  }
+  createStripePayment(stripeCustomerId, stripePaymentMethodId, stripeProductId, amount);
+  return;
+}
+
 
 export const processStripePayment = async (user: any, enrollment: any, paymentMethodId: string, res: Response) => {
   let stripeCustomerId = user.stripeCustomerId;

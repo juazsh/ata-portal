@@ -25,6 +25,11 @@ export interface IRegistration extends Document {
   totalAmountDue: number;
   discountCode?: string;
   discountAmount?: number;
+  paymentStatus?: string;
+  paymentProcessor?: string;
+  paymentTransactionId?: string;
+  paymentDate?: Date;
+  nextPaymentDate?: Date;
 
 
   stripeCustomerId?: string;
@@ -77,7 +82,12 @@ const RegistrationSchema = new Schema<IRegistration>(
     totalAmountDue: { type: Number, required: true },
     discountCode: { type: String },
     discountAmount: { type: Number },
-
+    paymentStatus: { type: String },
+    paymentProcessor: { type: String },
+    paymentTransactionId: { type: String },
+    paymentDate: { type: Date},
+    nextPaymentDate: {type: Date},
+  
 
     stripeCustomerId: { type: String },
     stripeSubscriptionId: { type: String },

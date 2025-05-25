@@ -58,6 +58,7 @@ export interface IUser extends Document {
   students?: mongoose.Types.ObjectId[];
   active: boolean;
   stripeCustomerId?: string;
+  paypalPayerId?: string;
 
   location?: string;
   level?: string;
@@ -149,6 +150,7 @@ const UserSchema = new Schema<IUser>(
     }],
     active: { type: Boolean, default: true },
     stripeCustomerId: { type: String, required: false },
+    paypalPayerId: {type: String, required: false},
 
     location: { type: String, required: false },
     level: { type: String, required: false },
@@ -195,3 +197,4 @@ UserSchema.methods.comparePassword = async function (candidatePassword: string):
 const User = mongoose.models.User || mongoose.model<IUser>('User', UserSchema);
 UserSchema.index({ username: 1 }, { unique: true, sparse: true });
 export default User;
+

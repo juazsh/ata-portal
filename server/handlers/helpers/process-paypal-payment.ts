@@ -4,6 +4,16 @@ import { Program } from '../../models/program';
 import { getPayPalAccessToken, createPayPalPlanForProduct, createPayPalProduct } from './paypal-client';
 import axios from 'axios';
 
+
+export const processGuestPayPalPayment = async (productId: string, planId: string, ) => {
+  const accessToken = await getPayPalAccessToken();
+  const baseUrl = process.env.NODE_ENV === 'production'
+      ? 'https://api.paypal.com'
+      : 'https://api.sandbox.paypal.com';
+}
+
+
+
 export const processPayPalPayment = async (user: any, enrollment: any, paymentMethodId: string | null, res: Response) => {
   try {
     const accessToken = await getPayPalAccessToken();
