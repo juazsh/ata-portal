@@ -12,6 +12,7 @@ export interface IEnrollment extends Document {
   paymentMethod: string;
   paymentStatus: string;
   classSessions: string[];
+  monthlyPaymentReceived: boolean;
   monthlyAmount?: number;
   subscriptionId?: string;
   nextPaymentDue?: Date;
@@ -68,7 +69,11 @@ const EnrollmentSchema = new Schema<IEnrollment>(
       type: String,
       required: true
     }],
-
+    monthlyPaymentReceived: {
+      type: Boolean,
+      default: false,
+      required: function () { return this.offeringType === 'Marathon'; }
+    },
     // >> For Marathon (subscription)
     monthlyAmount: {
       type: Number,

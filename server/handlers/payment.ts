@@ -3,20 +3,20 @@ import Stripe from 'stripe';
 import Payment from '../models/payment';
 import User from '../models/user';
 import { UserRole } from '../models/user';
-import { attachedNewPaymentToClientAccount, getPaymentMethod, setCustomerDefaultPaymentMethod } from './helpers/stripe-client';
+import { attachedNewPaymentToClientAccount, detachPaymentMethod, getPaymentMethod, setCustomerDefaultPaymentMethod } from './helpers/stripe-client';
 import mongoose from 'mongoose';
 
 const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || '', {
   apiVersion: '2025-03-31.basil',
 });
 
-export const addStripePaymentForUser = async (userId: string, stripCustomerId: string, paymentMethodId: string, isDefault: boolean = false, session: mongoose.ClientSession  | null = null ) => {
+export const addStripePaymentForUser = async (userId: string, stripCustomerId: string, paymentMethodId: string, isDefault: boolean = false, session: mongoose.ClientSession | null = null) => {
   const paymentMethod = await getPaymentMethod(paymentMethodId);
   if (paymentMethod.type !== 'card' || !paymentMethod.card) {
     throw Error("Invalid payment method")
   }
   await attachedNewPaymentToClientAccount(stripCustomerId, paymentMethodId);
-  if(isDefault){
+  if (isDefault) {
     await setCustomerDefaultPaymentMethod(stripCustomerId, paymentMethodId);
   }
   const payment = new Payment({
@@ -27,7 +27,7 @@ export const addStripePaymentForUser = async (userId: string, stripCustomerId: s
     isDefault,
     stripePaymentMethodId: paymentMethodId
   });
-  await payment.save({session});
+  await payment.save({ session });
 }
 
 
@@ -136,7 +136,7 @@ export const removePayment = async (req: Request, res: Response) => {
       return res.status(404).json({ message: 'User or Stripe customer not found' });
     }
 
-    await stripe.paymentMethods.detach(payment.stripePaymentMethodId);
+    await detachPaymentMethod(payment.stripePaymentMethodId);
 
     if (payment.isDefault) {
       const anotherPayment = await Payment.findOne({

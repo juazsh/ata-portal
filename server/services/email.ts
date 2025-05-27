@@ -35,9 +35,32 @@ export const sendMail = async ({ to, subject, html, attachments }: EmailOptions)
   try {
     const info = await transporter.sendMail(mailOptions);
     console.log('Email sent:', info.messageId);
-    return info;
+    return true;
   } catch (error) {
     console.error('Error sending email:', error);
-    throw error;
+    return false;
   }
 };
+
+export async function sendBulkEmails(emails: EmailOptions[]): Promise<{ sent: number; failed: number }> {
+  let sent = 0;
+  let failed = 0;
+  const batchSize = 5;
+  for (let i = 0; i < emails.length; i += batchSize) {
+    const batch = emails.slice(i, i + batchSize);
+
+    const promises = batch.map(async (email) => {
+      const success = await sendMail(email);
+      if (success) {
+        sent++;
+      } else {
+        failed++;
+      }
+    });
+    await Promise.all(promises);
+    if (i + batchSize < emails.length) {
+      await new Promise(resolve => setTimeout(resolve, 1000));
+    }
+  }
+  return { sent, failed };
+}

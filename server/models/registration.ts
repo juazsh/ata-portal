@@ -30,6 +30,8 @@ export interface IRegistration extends Document {
   paymentTransactionId?: string;
   paymentDate?: Date;
   nextPaymentDate?: Date;
+  autoPayEnabled?: boolean;
+  autoPayAmount?: number;
 
 
   stripeCustomerId?: string;
@@ -85,20 +87,19 @@ const RegistrationSchema = new Schema<IRegistration>(
     paymentStatus: { type: String },
     paymentProcessor: { type: String },
     paymentTransactionId: { type: String },
-    paymentDate: { type: Date},
-    nextPaymentDate: {type: Date},
-  
+    paymentDate: { type: Date },
+    nextPaymentDate: { type: Date },
+    autoPayEnabled: { type: Boolean, default: false },
+    autoPayAmount: { type: Number },
 
     stripeCustomerId: { type: String },
     stripeSubscriptionId: { type: String },
     stripePaymentIntentId: { type: String },
     stripePaymentMethodId: { type: String },
 
-
     paypalOrderId: { type: String },
     paypalSubscriptionId: { type: String },
     paypalPayerId: { type: String },
-
 
     isRegistrationComplete: { type: Boolean, default: false },
     isRegLinkedWithEnrollment: { type: Boolean, default: false },

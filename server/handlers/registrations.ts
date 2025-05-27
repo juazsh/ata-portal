@@ -6,7 +6,7 @@ import { generateInvoicePDF } from "../utils/pdf-generator";
 import { getRegistrationEmailTemplate } from "../utils/email-templates";
 import User, { UserRole } from "../models/user";
 import { InMemoryStore } from '../in-memory/InMemoryStore';
-import { attachedNewPaymentToClientAccount, createStripSubscription, createStripePayment, stripe } from './helpers/stripe-client';
+import { attachedNewPaymentToClientAccount, createStripSubscription, createStripSubscriptionWithTrial, createStripePayment, stripe } from './helpers/stripe-client';
 
 export const createRegistration = async (req: Request, res: Response) => {
   try {
@@ -27,7 +27,7 @@ export const createRegistration = async (req: Request, res: Response) => {
       }
     }
     const { stripePaymentMethodId, stripeCustomerId } = registrationData;
-    
+
     const existingUser = await User.findOne({ email: registrationData.parentEmail });
     if (existingUser) {
       return res.status(409).json({
@@ -35,7 +35,7 @@ export const createRegistration = async (req: Request, res: Response) => {
       });
     }
     if (!mongoose.Types.ObjectId.isValid(registrationData.programId) ||
-    !mongoose.Types.ObjectId.isValid(registrationData.offeringId)) {
+      !mongoose.Types.ObjectId.isValid(registrationData.offeringId)) {
       return res.status(400).json({
         message: "Invalid programId or offeringId format"
       });
@@ -43,36 +43,47 @@ export const createRegistration = async (req: Request, res: Response) => {
     const mem = InMemoryStore.getInstance();
     const program = mem.getProgramById(registrationData.programId);
     const offering = mem.getOfferingById(registrationData.offeringId);
+
     if (!program || !offering) {
       return res.status(400).json({
         message: "Invalid programId or offeringId"
       });
     }
-    const newRegistration = new Registration({...registrationData, paymentStatus: 'incomplete'});
+
+    const newRegistration = new Registration({ ...registrationData, paymentStatus: 'incomplete' });
     const savedRegistration = await newRegistration.save();
 
-    if(registrationData.paymentMethod === 'credit-card') {
+    const totalAmount = registrationData.autoPayEnabled
+      ? program.price + registrationData.taxAmount
+      : registrationData.firstPaymentAmount + registrationData.adminFee + registrationData.taxAmount;
+
+    if (registrationData.paymentMethod === 'credit-card') {
       savedRegistration.paymentProcessor = 'stripe';
       await attachedNewPaymentToClientAccount(stripeCustomerId, stripePaymentMethodId)
-      if(offering!.name === 'Marathon')
-      {
-        const subscription = await createStripSubscription(stripeCustomerId, stripePaymentMethodId, program!.stripeProductId as string, registrationData.totalAmountDue);
-        const nextPaymentDue = new Date();
-        nextPaymentDue.setMonth(nextPaymentDue.getMonth() + 1);
+      const paymentIntent = await createStripePayment(stripeCustomerId, stripePaymentMethodId, program!.stripeProductId as string, totalAmount);
+      savedRegistration.paymentDate = new Date();
+      savedRegistration.paymentTransactionId = paymentIntent.id;
+      savedRegistration.stripePaymentIntentId = paymentIntent.id;
+      savedRegistration.paymentStatus = 'completed';
+      var now = new Date();
+      let nextPaymentDate = (now.getMonth() == 11)
+        ? new Date(now.getFullYear() + 1, 0, 1)
+        : new Date(now.getFullYear(), now.getMonth() + 1, 1);
+      savedRegistration.nextPaymentDate = nextPaymentDate;
+      if (registrationData.autoPayEnabled) {
+        savedRegistration.autoPayAmount = totalAmount;
+        const trialEnd = Math.floor(nextPaymentDate.getTime() / 1000);
+        const subscription = await createStripSubscriptionWithTrial(stripeCustomerId,
+          stripePaymentMethodId,
+          program!.stripeProductId as string,
+          totalAmount,
+          trialEnd);
         savedRegistration.stripeSubscriptionId = subscription.id;
-        savedRegistration.nextPaymentDate = nextPaymentDue,
-        savedRegistration.paymentTransactionId = subscription.latest_invoice as string
-        savedRegistration.paymentStatus = 'completed';
-      } else {
-        const paymentIntent = await createStripePayment(stripeCustomerId, stripePaymentMethodId, program!.stripeProductId as string, registrationData.totalAmountDue);
-        savedRegistration.paymentDate = new Date();
-        savedRegistration.paymentTransactionId = paymentIntent.id;
-        savedRegistration.stripePaymentIntentId = paymentIntent.id;
-        savedRegistration.paymentStatus = 'completed';
       }
     } else {
       savedRegistration.paymentProcessor = 'paypal';
     }
+
     await savedRegistration.save();
     const pdfBuffer = await generateInvoicePDF(savedRegistration);
     const emailHtml = getRegistrationEmailTemplate({
