@@ -10,6 +10,7 @@ import { getPortalAccountEmailTemplate } from "../utils/portal-account-email-tem
 import { updateSessionCapacity } from "./class-sessions";
 import { ClassSession } from '../models/class-session';
 import { addStripePaymentForUser } from "./payment";
+import { InMemoryStore } from "server/in-memory";
 
 async function createParentUser(
   registration: any,
@@ -214,7 +215,10 @@ export const createPortalAccount = async (req: Request, res: Response) => {
 
     console.log("Student user created successfully", savedStudent);
 
-    const program = await Program.findById(registration.programId).populate('modules');
+    //const program = await Program.findById(registration.programId).populate('modules');
+    const mem = InMemoryStore.getInstance();
+    const program = mem.getProgramById(registration.programId._id.toString());
+    
     if (!program) {
       throw new Error('Program not found');
     }
@@ -223,31 +227,36 @@ export const createPortalAccount = async (req: Request, res: Response) => {
       programId: registration.programId,
       studentId: savedStudent._id,
       parentId: savedParent._id,
-      programFee: registration.firstPaymentAmount,
-      adminFee: registration.adminFee,
-      taxAmount: registration.taxAmount,
-      totalAmount: registration.totalAmountDue,
       offeringType: registration.offeringId.name.includes('Marathon') ? 'Marathon' : 'Sprint',
-      paymentMethod: registration.paymentMethod,
-      paymentStatus: 'completed',
-      classSessions: classSessions
+      autoPayEnabled: registration.enableAutoPay,
+      monthlyPaymentReceived: true,
+      discountCode: registration.discountCode,
+      discountPercent: registration.discountPercent,
+      adminPercent: registration.adminPercent,
+      taxPercent: registration.taxPercent,
+      lastAmountPaid: registration.firstPaymentAmount,
+      lastPaymentDate: registration.paymentDate,
+      lastPaymentTransactionId: registration.paymentTransactionId,
+      lastPaymentMethod: registration.paymentMethod,
+      lastPaymentStatus: registration.paymentStatus,
+      classSessions: classSessions,
     };
 
     if (enrollmentData.offeringType === 'Marathon') {
-      enrollmentData.monthlyAmount = program.price;
+      enrollmentData.nextPaymentDueDate = registration.nextPaymentDate;
       enrollmentData.subscriptionId = registration.paypalSubscriptionId || registration.stripeSubscriptionId || 'PENDING';
-      enrollmentData.nextPaymentDue = registration.nextPaymentDate;
-      enrollmentData.paymentTransactionId = registration.paymentTransactionId
+      enrollmentData.monthlyDueAmount = registration.autoPayAmount,
+      enrollmentData.lastPaymentTransactionId = registration.paymentTransactionId
     } else {
-      enrollmentData.paymentDate = registration.paymentDate;
-      enrollmentData.paymentTransactionId = registration.paypalOrderId || registration.stripePaymentIntentId || 'PENDING';
+      enrollmentData.lastPaymentTransactionId = registration.paypalOrderId || registration.stripePaymentIntentId || 'PENDING';
     }
-    const firstPayment = {amount: registration.totalAmountDue, 
+
+    const firstPayment = {amount: registration.firstPaymentAmount, 
       date: registration.paymentDate, 
       status: 'completed', 
       processor: registration.paymentProcessor,
       transactionId: registration.paymentTransactionId,
-     }
+    }
     enrollmentData.paymentHistory = [firstPayment];
     const enrollment = new Enrollment(enrollmentData);
     await enrollment.save({ session });

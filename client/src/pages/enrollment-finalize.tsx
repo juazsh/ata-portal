@@ -54,6 +54,10 @@ const FinalizeEnrollment = () => {
     enrollmentDate: undefined,
     stripePaymentMethodId: "",
     stripeCustomerId: "",
+    enableAutoPay: false,
+    discountPercent: 0,
+    userAgreedToTerm: false,
+    userAgreedToChargeTheCard: false,
   })
 
   const [isLoading, setIsLoading] = useState(false)
@@ -64,6 +68,7 @@ const FinalizeEnrollment = () => {
   const [discountCode, setDiscountCode] = useState("")
   const [showSuccessModal, setShowSuccessModal] = useState(false)
   const [showExistingUserModal, setShowExistingUserModal] = useState(false)
+  const [showAgreementModal, setShowAgreementModal] = useState(true)
 
   useEffect(() => {
     const fetchProgramDetails = async () => {
@@ -173,13 +178,17 @@ const FinalizeEnrollment = () => {
         taxAmount,
         totalAmountDue,
         discountCode: discountCode || undefined,
+        enableAutoPay: formData.enableAutoPay,
+        discountPercent: formData.discountPercent,
 
         stripePaymentMethodId: formData.stripePaymentMethodId,
         stripeCustomerId: formData.stripeCustomerId,
 
         isRegistrationComplete: false,
         isRegLinkedWithEnrollment: false,
-        isUserSetup: false
+        isUserSetup: false,
+        userAgreedToTerm: formData.userAgreedToTerm,
+        userAgreedToChargeTheCard: formData.userAgreedToChargeTheCard,
       }
 
       const response = await fetch("/api/registrations", {
@@ -271,6 +280,7 @@ const FinalizeEnrollment = () => {
 
   const getAdminFee = () => {
     if (!program || !formData.enrollmentDate) return 0
+    if (formData.enableAutoPay) return 0
     return Number.parseFloat((getFirstPaymentAmount() * 0.03).toFixed(2))
   }
 
@@ -281,11 +291,42 @@ const FinalizeEnrollment = () => {
 
   const getTotalAmountDue = () => {
     if (!program || !formData.enrollmentDate) return 0
-    return Number.parseFloat((getFirstPaymentAmount() + getAdminFee() + getTaxAmount()).toFixed(2))
+    const discount = formData.discountPercent ? getFirstPaymentAmount() * (formData.discountPercent / 100) : 0
+    return Number.parseFloat((getFirstPaymentAmount() - discount + getAdminFee() + getTaxAmount()).toFixed(2))
   }
 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-slate-950 py-10 px-4">
+      {/* Agreement Modal */}
+      <Dialog open={showAgreementModal}>
+        <DialogContent className="sm:max-w-lg">
+          <DialogHeader>
+            <DialogTitle className="text-center text-2xl">Registration Agreement</DialogTitle>
+            <DialogDescription className="text-center pt-4">
+              <p className="text-base mb-4">
+                Please review and agree to the terms before continuing with registration. By clicking "Agree and Continue", you acknowledge you have read and accept our policies regarding enrollment, payment, and refunds.
+              </p>
+              <ul className="text-left text-sm mb-4 list-disc pl-6">
+                <li>All enrollments are subject to program availability and approval.</li>
+                <li>Payments are processed securely. Refunds are subject to our refund policy.</li>
+                <li>Auto-pay enrollment will waive admin fees (see payment step).</li>
+                <li>Contact support for any questions before proceeding.</li>
+              </ul>
+            </DialogDescription>
+          </DialogHeader>
+          <div className="flex justify-center mt-6">
+            <Button
+              onClick={() => {
+                setShowAgreementModal(false)
+                setFormData((prev) => ({ ...prev, userAgreedToTerm: true }))
+              }}
+              className="w-full sm:w-auto"
+            >
+              Agree and Continue
+            </Button>
+          </div>
+        </DialogContent>
+      </Dialog>
       <div className="container mx-auto max-w-4xl">
         <div className="mb-8">
           <img

@@ -41,18 +41,16 @@ const ClassSessionCalendar: React.FC<ClassSessionCalendarProps> = ({
 
   const daysOfWeek = ["Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"];
 
-  // Determine max sessions based on program type
   const getMaxSessionsAllowed = () => {
     if (!program) return 0;
 
     const isMarathon = program.offering.name.includes("Marathon");
-    if (!isMarathon) return 1; // Sprint programs only allow one session
+    if (!isMarathon) return 1;
 
     const isTwiceAWeek = program.name.toLowerCase().includes("twice");
-    return isTwiceAWeek ? 2 : 1; // Marathon: twice a week = 2 sessions, once a week = 1 session
+    return isTwiceAWeek ? 2 : 1;
   };
 
-  // Format time for display
   const formatTime = (time: string) => {
     const [hours, minutes] = time.split(":");
     const hour = parseInt(hours, 10);
@@ -71,8 +69,6 @@ const ClassSessionCalendar: React.FC<ClassSessionCalendarProps> = ({
       const isMarathon = program.offering.name.includes("Marathon");
       let url = "/api/class-sessions";
 
-      // For Marathon programs, get sessions with no program_id 
-      // For Sprint programs, get sessions with matching program_id
       if (!isMarathon) {
         url += `?program_id=${program._id}`;
       }
@@ -91,7 +87,6 @@ const ClassSessionCalendar: React.FC<ClassSessionCalendarProps> = ({
         throw new Error("Invalid response format from server");
       }
 
-      // Filter sessions for Marathon programs (should have no program_id)
       let availableSessions = isMarathon
         ? data.sessions.filter((session: ClassSession) => !session.program_id)
         : data.sessions;
@@ -119,7 +114,7 @@ const ClassSessionCalendar: React.FC<ClassSessionCalendarProps> = ({
   };
 
   const handleSelectSession = (session: ClassSession) => {
-    // Check if already selected
+    
     if (selectedSessions.some(s => s.id === session.id)) {
       setSelectedSessions(selectedSessions.filter(s => s.id !== session.id));
       return;
@@ -127,7 +122,6 @@ const ClassSessionCalendar: React.FC<ClassSessionCalendarProps> = ({
 
     const maxSessions = getMaxSessionsAllowed();
 
-    // Check if max sessions reached
     if (selectedSessions.length >= maxSessions) {
       toast({
         title: "Session limit reached",

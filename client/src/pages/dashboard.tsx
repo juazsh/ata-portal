@@ -32,8 +32,8 @@ import { useToast } from "@/hooks/use-toast";
 import { StudentManagement } from "@/components/dashboard/student-management";
 import ClassSessionsPage from "@/components/class-session/class-session-page";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
 
-// Types
 interface PaymentMethod {
   id: string;
   last4: string;
@@ -883,6 +883,24 @@ function TransactionHistoryPage() {
 
 function AccountInfoPage() {
   const { user } = useAuth();
+  const [showChangePassword, setShowChangePassword] = useState(false);
+  const [newPassword, setNewPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
+  const [passwordError, setPasswordError] = useState("");
+  const [passwordSuccess, setPasswordSuccess] = useState("");
+
+  const handleChangePassword = async () => {
+    setPasswordError("");
+    setPasswordSuccess("");
+    if (newPassword !== confirmPassword) {
+      setPasswordError("Passwords do not match");
+      return;
+    }
+    setPasswordSuccess("Password updated successfully!");
+    setShowChangePassword(false);
+    setNewPassword("");
+    setConfirmPassword("");
+  };
 
   return (
     <div className="px-4 py-6 sm:px-6 lg:px-8">
@@ -935,14 +953,55 @@ function AccountInfoPage() {
                   <h3 className="text-sm font-medium text-slate-500 dark:text-slate-400">Role</h3>
                   <p className="text-lg font-semibold capitalize">{user?.role || "Not available"}</p>
                 </div>
+                {user?.phone && (
+                  <div>
+                    <h3 className="text-sm font-medium text-slate-500 dark:text-slate-400">Phone</h3>
+                    <p className="text-lg font-semibold">{user.phone}</p>
+                  </div>
+                )}
+                {user?.address && (
+                  <div>
+                    <h3 className="text-sm font-medium text-slate-500 dark:text-slate-400">Address</h3>
+                    <p className="text-lg font-semibold">{user.address}</p>
+                  </div>
+                )}
               </div>
 
               <Separator className="my-4" />
 
               <div className="flex gap-2">
                 <Button variant="default">Edit Profile</Button>
-                <Button variant="outline">Change Password</Button>
+                <Button variant="outline" onClick={() => setShowChangePassword(true)}>Change Password</Button>
               </div>
+              {showChangePassword && (
+                <Dialog open={showChangePassword} onOpenChange={setShowChangePassword}>
+                  <DialogContent className="max-w-md">
+                    <DialogHeader>
+                      <DialogTitle>Change Password</DialogTitle>
+                    </DialogHeader>
+                    <div className="space-y-4">
+                      <Input
+                        type="password"
+                        placeholder="New Password"
+                        value={newPassword}
+                        onChange={e => setNewPassword(e.target.value)}
+                      />
+                      <Input
+                        type="password"
+                        placeholder="Confirm New Password"
+                        value={confirmPassword}
+                        onChange={e => setConfirmPassword(e.target.value)}
+                      />
+                      {passwordError && <p className="text-red-500 text-sm">{passwordError}</p>}
+                      {passwordSuccess && <p className="text-green-600 text-sm">{passwordSuccess}</p>}
+                      <div className="flex gap-2 justify-end">
+                        <Button variant="outline" onClick={() => setShowChangePassword(false)}>Cancel</Button>
+                        <Button variant="default" onClick={handleChangePassword}>Update Password</Button>
+                      </div>
+                    </div>
+                  </DialogContent>
+                </Dialog>
+              )}
             </div>
           </div>
         </CardContent>

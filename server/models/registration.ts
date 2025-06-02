@@ -20,11 +20,11 @@ export interface IRegistration extends Document {
 
   paymentMethod: "paypal" | "credit-card";
   firstPaymentAmount: number;
-  adminFee: number;
-  taxAmount: number;
+  adminPercent?: number;
+  taxPercent?: number;
   totalAmountDue: number;
   discountCode?: string;
-  discountAmount?: number;
+  discountPercent?: number;
   paymentStatus?: string;
   paymentProcessor?: string;
   paymentTransactionId?: string;
@@ -79,11 +79,11 @@ const RegistrationSchema = new Schema<IRegistration>(
       required: true
     },
     firstPaymentAmount: { type: Number, required: true },
-    adminFee: { type: Number, required: true },
-    taxAmount: { type: Number, required: true },
+    adminPercent: { type: Number},
+    taxPercent: { type: Number},
     totalAmountDue: { type: Number, required: true },
     discountCode: { type: String },
-    discountAmount: { type: Number },
+    discountPercent: { type: Number },
     paymentStatus: { type: String },
     paymentProcessor: { type: String },
     paymentTransactionId: { type: String },

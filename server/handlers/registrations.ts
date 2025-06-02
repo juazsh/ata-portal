@@ -6,16 +6,20 @@ import { generateInvoicePDF } from "../utils/pdf-generator";
 import { getRegistrationEmailTemplate } from "../utils/email-templates";
 import User, { UserRole } from "../models/user";
 import { InMemoryStore } from '../in-memory/InMemoryStore';
-import { attachedNewPaymentToClientAccount, createStripSubscription, createStripSubscriptionWithTrial, createStripePayment, stripe } from './helpers/stripe-client';
+import { attachedNewPaymentToClientAccount, createStripSubscriptionWithTrial, createStripePaymentWithoutRedirect, isPaymentMethodAlreadyAttached } from './helpers/stripe-client';
+import { isCodeValid } from "./discount-codes";
 
 export const createRegistration = async (req: Request, res: Response) => {
   try {
     const registrationData = req.body;
+    const taxPercent = 0.2;
+    const adminFee = 0.02;
+
     const requiredFields = [
       'parentFirstName', 'parentLastName', 'parentEmail', 'parentPhone',
       'studentFirstName', 'studentLastName', 'studentDOB',
       'programId', 'offeringId', 'enrollmentDate',
-      'paymentMethod', 'firstPaymentAmount', 'adminFee', 'taxAmount', 'totalAmountDue',
+      'paymentMethod', 'firstPaymentAmount','totalAmountDue', 'enrollmentDate',
       'stripeCustomerId', 'stripeCustomerId'
     ];
 
@@ -26,7 +30,7 @@ export const createRegistration = async (req: Request, res: Response) => {
         });
       }
     }
-    const { stripePaymentMethodId, stripeCustomerId } = registrationData;
+    const { stripePaymentMethodId, stripeCustomerId, enableAutoPay } = registrationData;
 
     const existingUser = await User.findOne({ email: registrationData.parentEmail });
     if (existingUser) {
@@ -50,33 +54,62 @@ export const createRegistration = async (req: Request, res: Response) => {
       });
     }
 
-    const newRegistration = new Registration({ ...registrationData, paymentStatus: 'incomplete' });
-    const savedRegistration = await newRegistration.save();
+    let firstPaymentAmount = offering.name === 'Marathon'
+      ? calculateFirstPaymentAmount(new Date(registrationData.enrollmentDate), program.price)
+      : program.price;
+    
+    const newRegistration = new Registration({ ...registrationData, 
+      taxPercent: taxPercent,
+      adminPercent: adminFee,
+      autoPayEnabled: enableAutoPay,
+      paymentStatus: 'incomplete' });
+    
+      const savedRegistration = await newRegistration.save();
 
-    const totalAmount = registrationData.autoPayEnabled
-      ? program.price + registrationData.taxAmount
-      : registrationData.firstPaymentAmount + registrationData.adminFee + registrationData.taxAmount;
+    firstPaymentAmount = enableAutoPay
+      ? firstPaymentAmount + (firstPaymentAmount * taxPercent)
+      : firstPaymentAmount + (firstPaymentAmount * taxPercent) + (firstPaymentAmount * adminFee);
 
+    if( registrationData.discountCode ) {
+      let { valid, code, percent } = await isCodeValid(registrationData.discountCode);
+      if(valid) {
+        firstPaymentAmount =  firstPaymentAmount - (firstPaymentAmount * (percent! / 100));
+        savedRegistration.discountCode = code.code;
+        savedRegistration.discountPercent = percent!;
+      } else {
+        return res.status(400).json({
+          message: "Invalid discount code"
+        });
+      }
+    }
+    savedRegistration.firstPaymentAmount = firstPaymentAmount;
+    
     if (registrationData.paymentMethod === 'credit-card') {
       savedRegistration.paymentProcessor = 'stripe';
-      await attachedNewPaymentToClientAccount(stripeCustomerId, stripePaymentMethodId)
-      const paymentIntent = await createStripePayment(stripeCustomerId, stripePaymentMethodId, program!.stripeProductId as string, totalAmount);
+      if(!await isPaymentMethodAlreadyAttached(stripeCustomerId, stripePaymentMethodId)) {
+        await attachedNewPaymentToClientAccount(stripeCustomerId, stripePaymentMethodId)
+      }
+      const paymentIntent = await createStripePaymentWithoutRedirect(stripeCustomerId, stripePaymentMethodId, program!.stripeProductId as string, firstPaymentAmount);
       savedRegistration.paymentDate = new Date();
       savedRegistration.paymentTransactionId = paymentIntent.id;
       savedRegistration.stripePaymentIntentId = paymentIntent.id;
       savedRegistration.paymentStatus = 'completed';
-      var now = new Date();
+      const now = new Date();
+      
       let nextPaymentDate = (now.getMonth() == 11)
         ? new Date(now.getFullYear() + 1, 0, 1)
         : new Date(now.getFullYear(), now.getMonth() + 1, 1);
+
       savedRegistration.nextPaymentDate = nextPaymentDate;
-      if (registrationData.autoPayEnabled) {
-        savedRegistration.autoPayAmount = totalAmount;
+      if (enableAutoPay) {
+        const subscriptionAmount =  program.price + (program.price * taxPercent);
+        savedRegistration.autoPayAmount = subscriptionAmount;
         const trialEnd = Math.floor(nextPaymentDate.getTime() / 1000);
+
         const subscription = await createStripSubscriptionWithTrial(stripeCustomerId,
           stripePaymentMethodId,
           program!.stripeProductId as string,
-          totalAmount,
+          subscriptionAmount,
           trialEnd);
         savedRegistration.stripeSubscriptionId = subscription.id;
       }
@@ -255,3 +288,33 @@ export const getRegistrations = async (req: Request, res: Response) => {
     });
   }
 };
+
+const calculateFirstPaymentAmount = (enrollmentDate: Date, price: number) => {
+  
+    const year = enrollmentDate.getFullYear();
+    const month = enrollmentDate.getMonth();
+    const sundays: Date[] = [];
+    const firstDay = new Date(year, month, 1);
+    const lastDay = new Date(year, month + 1, 0);
+    let d = new Date(firstDay);
+    d.setDate(d.getDate() + (7 - d.getDay()) % 7); // => this is the first Sunday of the month
+    while (d <= lastDay) {
+      sundays.push(new Date(d));
+      d.setDate(d.getDate() + 7);
+    }
+    const numWeeks = sundays.length;
+
+    let weekOfEnrollment = 0;
+    for (let i = 0; i < sundays.length; i++) {
+      if (enrollmentDate <= sundays[i]) {
+        weekOfEnrollment = i + 1;
+        break;
+      }
+    }
+    const isWeekend = enrollmentDate.getDay() === 0 || enrollmentDate.getDay() === 6;
+    let weeksToCharge = numWeeks - (weekOfEnrollment - 1);
+    if (isWeekend) weeksToCharge -= 1;
+    if (weeksToCharge < 0) weeksToCharge = 0;
+    const weeklyFee = price / numWeeks;
+    return Number((weeklyFee * weeksToCharge).toFixed(2));
+}

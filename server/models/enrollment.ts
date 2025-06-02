@@ -4,18 +4,27 @@ export interface IEnrollment extends Document {
   programId: mongoose.Types.ObjectId;
   studentId: mongoose.Types.ObjectId;
   parentId: mongoose.Types.ObjectId;
-  programFee: number;
-  adminFee: number;
-  taxAmount: number;
-  totalAmount: number;
-  offeringType: 'Marathon' | 'Sprint';
-  paymentMethod: string;
-  paymentStatus: string;
-  classSessions: string[];
-  monthlyPaymentReceived: boolean;
-  monthlyAmount?: number;
   subscriptionId?: string;
-  nextPaymentDue?: Date;
+
+  offeringType: 'Marathon' | 'Sprint';
+  classSessions: string[];
+
+  discountCode?: string;
+  discountPercent?: number;
+  adminPercent: number;
+  taxPercent: number;
+
+  lastAmountPaid: number;
+  lastPaymentDate?: Date;
+  lastPaymentTransactionId?: string;
+  lastPaymentMethod: string;
+  lastPaymentStatus: string;
+  monthlyPaymentReceived: boolean;
+  
+  autoPayEnabled?: boolean;
+  nextPaymentDueDate?: Date;
+  monthlyDueAmount?: number;
+
   paymentHistory?: {
     amount: number;
     date: Date;
@@ -23,11 +32,11 @@ export interface IEnrollment extends Document {
     processor: string;
     transactionId: string;
   }[];
-  paymentDate?: Date;
-  paymentTransactionId?: string;
+
   createdAt: Date;
   updatedAt: Date;
 }
+
 
 const EnrollmentSchema = new Schema<IEnrollment>(
   {
@@ -46,45 +55,71 @@ const EnrollmentSchema = new Schema<IEnrollment>(
       ref: 'User',
       required: true
     },
-    programFee: { type: Number, required: true },
-    adminFee: { type: Number, required: true },
-    taxAmount: { type: Number, required: true },
-    totalAmount: { type: Number, required: true },
+    subscriptionId: {
+      type: String,
+      required: function () { return this.offeringType === 'Marathon'; }
+    },
     offeringType: {
       type: String,
       enum: ['Marathon', 'Sprint'],
       required: true
     },
-    paymentMethod: {
-      type: String,
-      enum: ['paypal', 'credit-card'],
-      required: true
-    },
-    paymentStatus: {
-      type: String,
-      enum: ['pending', 'completed', 'failed', 'refunded', 'active', 'cancelled'],
-      default: 'pending'
-    },
     classSessions: [{
       type: String,
       required: true
     }],
+    discountCode: {
+      type: String,
+      required: false
+    },
+    discountPercent: {
+      type: Number,
+      required: false
+    },
+    adminPercent: {
+      type: Number,
+      required: true
+    },
+    taxPercent: {
+      type: Number,
+      required: true
+    },
+    lastAmountPaid: {
+      type: Number,
+      required: true
+    },
+    lastPaymentDate: {
+      type: Date,
+      required: false
+    },
+    lastPaymentTransactionId: {
+      type: String,
+      required: false
+    },
+    lastPaymentMethod: {
+      type: String,
+      required: true
+    },
+    lastPaymentStatus: {
+      type: String,
+      required: true
+    },
     monthlyPaymentReceived: {
       type: Boolean,
       default: false,
       required: function () { return this.offeringType === 'Marathon'; }
     },
-    // >> For Marathon (subscription)
-    monthlyAmount: {
-      type: Number,
-      required: function () { return this.offeringType === 'Marathon'; }
+    autoPayEnabled: {
+      type: Boolean,
+      required: false, 
+      default: false
     },
-    subscriptionId: {
-      type: String,
-      required: function () { return this.offeringType === 'Marathon'; }
-    },
-    nextPaymentDue: {
+    nextPaymentDueDate: {
       type: Date,
+      required: function () { return this.offeringType === 'Marathon'; }
+    },
+    monthlyDueAmount: {
+      type: Number,
       required: function () { return this.offeringType === 'Marathon'; }
     },
     paymentHistory: [{
@@ -95,17 +130,9 @@ const EnrollmentSchema = new Schema<IEnrollment>(
         enum: ['pending', 'completed', 'failed', 'refunded'],
         required: true
       },
-      processor: { type: String },
+      processor: { type: String, required: true },
       transactionId: { type: String, required: true }
-    }],
-    paymentDate: {
-      type: Date,
-      required: function () { return this.offeringType === 'Sprint'; }
-    },
-    paymentTransactionId: {
-      type: String,
-      required: function () { return this.offeringType === 'Sprint'; }
-    }
+    }]
   },
   { timestamps: true }
 );

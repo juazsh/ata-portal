@@ -84,18 +84,18 @@ export async function generateInvoicePDF(registration: IRegistration): Promise<B
         .text(`$${registration.firstPaymentAmount.toFixed(2)}`, 450, yPosition, { width: 90, align: 'right' });
 
       yPosition += 20;
-      doc.text('Administrative Fee', 50, yPosition)
-        .text(`$${registration.adminFee.toFixed(2)}`, 450, yPosition, { width: 90, align: 'right' });
+      doc.text('Administrative Fee %', 50, yPosition)
+        .text(`$${registration.adminPercent}`, 450, yPosition, { width: 90, align: 'right' });
 
       yPosition += 20;
-      doc.text('Tax', 50, yPosition)
-        .text(`$${registration.taxAmount.toFixed(2)}`, 450, yPosition, { width: 90, align: 'right' });
+      doc.text('Tax %', 50, yPosition)
+        .text(`$${registration.taxPercent}`, 450, yPosition, { width: 90, align: 'right' });
 
 
-      if (registration.discountAmount && registration.discountAmount > 0) {
+      if (registration.discountPercent && registration.discountPercent > 0) {
         yPosition += 20;
-        doc.text(`Discount (${registration.discountCode})`, 50, yPosition)
-          .text(`-$${registration.discountAmount.toFixed(2)}`, 450, yPosition, { width: 90, align: 'right' });
+        doc.text(`Discount % for coe (${registration.discountCode})`, 50, yPosition)
+          .text(`-$${registration.discountPercent}`, 450, yPosition, { width: 90, align: 'right' });
       }
 
 
@@ -106,7 +106,7 @@ export async function generateInvoicePDF(registration: IRegistration): Promise<B
       yPosition += 35;
       doc.font('Helvetica-Bold')
         .text('Total Due:', 350, yPosition)
-        .text(`$${registration.totalAmountDue.toFixed(2)}`, 450, yPosition, { width: 90, align: 'right' });
+        .text(`$${registration.firstPaymentAmount.toFixed(2)}`, 450, yPosition, { width: 90, align: 'right' });
 
 
       yPosition += 40;

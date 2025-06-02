@@ -25,6 +25,8 @@ export class InMemoryStore {
     return this.offerings.get(id);
   }
   public getProgramById(id: string): IProgram | undefined {
+    console.log("id", id);
+    console.log("this.programs", this.programs);
     return this.programs.get(id);
   }
 

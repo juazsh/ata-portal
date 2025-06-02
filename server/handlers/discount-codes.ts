@@ -2,7 +2,7 @@ import { Request, Response } from "express";
 import DiscountCode, { UsageType } from "../models/discount-code";
 import mongoose from "mongoose";
 
-export const isCodeValid = async (code: string): Promise<{ valid: boolean; code?: any; message?: string }> => {
+export const isCodeValid = async (code: string): Promise<{ valid: boolean; code?: any; message?: string, percent?: number }> => {
   try {
     const discountCode = await DiscountCode.findOne({
       code: code.toUpperCase(),
@@ -27,7 +27,8 @@ export const isCodeValid = async (code: string): Promise<{ valid: boolean; code?
 
     return {
       valid: true,
-      code: discountCode
+      code: discountCode,
+      percent: discountCode.percent,
     };
   } catch (error) {
     console.error("Error validating discount code:", error);
@@ -37,6 +38,8 @@ export const isCodeValid = async (code: string): Promise<{ valid: boolean; code?
     };
   }
 };
+
+
 
 export const addDiscountCode = async (req: Request, res: Response) => {
   try {

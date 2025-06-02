@@ -30,7 +30,7 @@ export function PaymentMethodModal({ open, onOpenChange, onSuccess, customerId }
   const [nameOnCard, setNameOnCard] = useState("");
   const [cardComplete, setCardComplete] = useState(false);
   const [cardError, setCardError] = useState<string | null>(null);
-  const [isStripeLoading, setIsStripeLoading] = useState(true); // Track script loading
+  const [isStripeLoading, setIsStripeLoading] = useState(true);
 
 
   useEffect(() => {
@@ -230,7 +230,7 @@ export function PaymentMethodModal({ open, onOpenChange, onSuccess, customerId }
       toast({
         title: "Card Error",
         description: cardError, // >> Display the existing card error message
-        variant: "default", // Use default for warning/info
+        variant: "default", // >> Use default for warning/info
       });
       return;
     }
@@ -264,7 +264,6 @@ export function PaymentMethodModal({ open, onOpenChange, onSuccess, customerId }
       }
       console.log("HandleSubmit: Payment method created:", paymentMethod.id);
 
-      // If user is logged in, attach payment method to user as before
       if (user?.id && !customerId) {
         const token = localStorage.getItem('auth_token');
         if (!token) {

@@ -49,4 +49,8 @@ export interface FormData {
   enrollmentDate: Date | undefined
   stripePaymentMethodId?: string
   stripeCustomerId?: string
+  enableAutoPay?: boolean
+  discountPercent?: number
+  userAgreedToTerm?: boolean
+  userAgreedToChargeTheCard?: boolean
 }

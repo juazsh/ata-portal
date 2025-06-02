@@ -54,6 +54,20 @@ export async function createStripSubscriptionWithTrial(scid: string,
     trial_end: trialEnd
   });
 }
+export async function createStripePaymentWithoutRedirect(stripeCustomerId: string, paymentMethodToUse: string, spid: string, amt: number): Promise<Stripe.PaymentIntent> {
+  return await stripe.paymentIntents.create({
+    amount: Math.round(amt * 100),
+    currency: 'usd',
+    customer: stripeCustomerId,
+    payment_method: paymentMethodToUse,
+    confirm: true,
+    description: `One-time program payment for product ${spid}`,
+    automatic_payment_methods: {
+      enabled: true,
+      allow_redirects: 'never',
+    },
+  });
+}
 export async function createStripePayment(stripeCustomerId: string, paymentMethodToUse: string, spid: string, amt: number): Promise<Stripe.PaymentIntent> {
   return await stripe.paymentIntents.create({
     amount: Math.round(amt * 100),
@@ -86,6 +100,10 @@ export async function attachedNewPaymentToClientAccount(stripeCustomerId: string
 }
 export async function detachPaymentMethod(paymentMethodId: string) {
   await stripe.paymentMethods.detach(paymentMethodId);
+}
+export async function isPaymentMethodAlreadyAttached(stripeCustomerId: string, paymentMethodId: string): Promise<boolean> {
+  const paymentMethod = await stripe.paymentMethods.retrieve(paymentMethodId);
+  return paymentMethod.customer === stripeCustomerId;
 }
 export async function getPaymentMethod(paymentMethodId: string): Promise<Stripe.PaymentMethod> {
   return await stripe.paymentMethods.retrieve(paymentMethodId);
