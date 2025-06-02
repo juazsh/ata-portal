@@ -97,7 +97,19 @@ export const getStudentsByParent = async (req: Request, res: Response) => {
       students.map(async (student) => {
         try {
           const enrollments = await Enrollment.find({ studentId: student._id })
-            .populate('programId', 'name');
+            .populate({
+              path: 'programId',
+              populate: [
+                { path: 'modules', populate: { path: 'topics' } },
+                { path: 'offering' }
+              ]
+            });
+          // Set dummy image if not present
+          enrollments.forEach(enrollment => {
+            if (enrollment.programId && !enrollment.programId.image) {
+              enrollment.programId.image = 'https://placehold.co/100x100/png?text=Program';
+            }
+          });
           const progressData = await getStudentProgress(student._id);
           let overallProgress = 0;
           if (progressData?.programs?.length > 0) {
@@ -183,7 +195,8 @@ export const getStudentsByProgram = async (req: Request, res: Response) => {
       return res.status(200).json([]);
     }
 
-    const studentIds = [...new Set(enrollments.map(e => e.studentId))];
+    const studentIdsSet = new Set(enrollments.map(e => e.studentId));
+    const studentIds = Array.from(studentIdsSet);
     const students = await User.find({
       _id: { $in: studentIds },
       role: UserRole.STUDENT

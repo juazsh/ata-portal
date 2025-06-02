@@ -207,23 +207,19 @@ const PortalEntryForm = () => {
       return
     }
 
-    // Check if session is already selected
     const isSelected = formData.selectedSessions.some(s => s.id === session.id)
 
     if (isSelected) {
-      // Remove from selection
       const newSessions = formData.selectedSessions.filter(s => s.id !== session.id)
       setFormData(prev => ({
         ...prev,
         selectedSessions: newSessions
       }))
 
-      // Update selected days
       const newDays = new Set(selectedDays)
       newDays.delete(session.weekday)
       setSelectedDays(newDays)
     } else {
-      // Check if we can add this day (only one session per day)
       if (selectedDays.has(session.weekday)) {
         toast({
           title: "Same Day Selection",
@@ -233,19 +229,16 @@ const PortalEntryForm = () => {
         return
       }
 
-      // Determine if we can add more sessions (limit based on program type)
       const isTwiceAWeek = registrationData?.programName?.toLowerCase().includes("twice")
       const maxSessions = isTwiceAWeek ? 2 : 1
 
       if (formData.selectedSessions.length >= maxSessions) {
-        // Replace the first selected session if we already have max sessions
         toast({
           title: "Session Selection Limited",
           description: `You can only select ${maxSessions} session(s) for this program.`,
           variant: "default",
         })
 
-        // Remove the first session and its day
         const oldSession = formData.selectedSessions[0]
         const newSessions = [...formData.selectedSessions.slice(1), session]
 
@@ -254,7 +247,6 @@ const PortalEntryForm = () => {
           selectedSessions: newSessions
         }))
 
-        // Update selected days
         const newDays = new Set(selectedDays)
         if (oldSession) {
           newDays.delete(oldSession.weekday)
@@ -262,13 +254,11 @@ const PortalEntryForm = () => {
         newDays.add(session.weekday)
         setSelectedDays(newDays)
       } else {
-        // Add to selection
         setFormData(prev => ({
           ...prev,
           selectedSessions: [...prev.selectedSessions, session]
         }))
 
-        // Add the day to selected days
         const newDays = new Set(selectedDays)
         newDays.add(session.weekday)
         setSelectedDays(newDays)
@@ -294,7 +284,6 @@ const PortalEntryForm = () => {
   }
 
   const isFormValid = () => {
-    // Determine required number of sessions based on program type
     const isTwiceAWeek = registrationData?.programName?.toLowerCase().includes("twice")
     const requiredSessionCount = isTwiceAWeek ? 2 : 1
 
@@ -307,15 +296,15 @@ const PortalEntryForm = () => {
       formData.state.trim() !== "" &&
       formData.zipCode.trim() !== "" &&
       formData.country.trim() !== "" &&
-      /^\d{5}(-\d{4})?$/.test(formData.zipCode) && // US ZIP code validation
-      formData.selectedSessions.length === requiredSessionCount // Ensure correct number of sessions are selected
+      /^\d{5}(-\d{4})?$/.test(formData.zipCode) && 
+      formData.selectedSessions.length === requiredSessionCount 
     )
   }
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
 
-    // Determine required number of sessions based on program type
+    
     const isTwiceAWeek = registrationData?.programName?.toLowerCase().includes("twice")
     const requiredSessionCount = isTwiceAWeek ? 2 : 1
 
@@ -385,7 +374,6 @@ const PortalEntryForm = () => {
     )
   }
 
-  // Format time string to more readable format (e.g., "14:30" to "2:30 PM")
   const formatTime = (timeString: string) => {
     const [hours, minutes] = timeString.split(':').map(Number)
     const period = hours >= 12 ? 'PM' : 'AM'
@@ -393,7 +381,6 @@ const PortalEntryForm = () => {
     return `${formattedHours}:${minutes.toString().padStart(2, '0')} ${period}`
   }
 
-  // Calculate capacity percentage
   const getCapacityPercentage = (available: number, total: number) => {
     if (total === 0) return 0
     return Math.round(((total - available) / total) * 100)
@@ -622,7 +609,6 @@ const PortalEntryForm = () => {
                 </div>
               </div>
 
-              {/* Class Session Selection Section */}
               <div className="space-y-4">
                 <h3 className="text-lg font-semibold flex items-center gap-2">
                   <CalendarIcon className="h-5 w-5" />
@@ -648,7 +634,6 @@ const PortalEntryForm = () => {
                         </Badge>
                       </div>
 
-                      {/* Important notes */}
                       <div className="mb-4 p-3 bg-amber-50 dark:bg-amber-900/20 border border-amber-200 dark:border-amber-800 rounded-md">
                         <div className="flex items-start gap-2">
                           <AlertTriangle className="h-5 w-5 text-amber-500 mt-0.5 flex-shrink-0" />

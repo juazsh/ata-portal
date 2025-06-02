@@ -189,6 +189,7 @@ export const createEnrollment = async (req: Request, res: Response) => {
 
 export const getEnrollmentById = async (req: Request, res: Response) => {
   try {
+    
     const { enrollmentId } = req.params;
     const currentUser = req.user as any;
 
@@ -203,10 +204,9 @@ export const getEnrollmentById = async (req: Request, res: Response) => {
         message: 'Enrollment not found'
       });
     }
-
     if (
       currentUser.role === UserRole.PARENT &&
-      enrollment.parentId.toString() !== currentUser.id.toString()
+      enrollment.parentId._id.toString() !== currentUser.id.toString()
     ) {
       return res.status(403).json({
         success: false,

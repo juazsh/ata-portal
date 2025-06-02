@@ -12,6 +12,7 @@ import DemoClassRegistration from "./pages/demo-registration";
 import PortalEntryForm from "./pages/portal-entry";
 import ForgotPasswordPage from "@/pages/forget-password";
 import VerifyPasswordPage from "./pages/verify-password";
+import StudentEnrollmentDetails from "@/pages/student-enrollment-details";
 
 
 function Router() {
@@ -40,6 +41,7 @@ function Router() {
       <ProtectedRoute path="/add-student" component={Dashboard} />
       <ProtectedRoute path="/class-sessions" component={Dashboard} />
       <ProtectedRoute path="/discount-codes" component={Dashboard} />
+      <ProtectedRoute path="/student/:username/enrollment/:enrollmentId" component={Dashboard} /> 
 
 
       <Route component={NotFound} />

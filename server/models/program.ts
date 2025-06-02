@@ -50,6 +50,7 @@ export interface IProgram extends Document {
   modules: Types.ObjectId[];
   stripeProductId?: string;
   paypalProductId?: string;
+  image?: string;
 }
 
 const ProgramSchema = new Schema<IProgram>(
@@ -63,6 +64,7 @@ const ProgramSchema = new Schema<IProgram>(
     modules: [{ type: Schema.Types.ObjectId, ref: "Module" }],
     stripeProductId: { type: String },
     paypalProductId: { type: String },
+    image: { type: String },
   },
   { timestamps: true }
 );

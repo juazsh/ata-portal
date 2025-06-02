@@ -245,7 +245,6 @@ const FinalizeEnrollment = () => {
     )
   }
 
-  // Class session selection has been moved to portal-entry.tsx
 
   const getAttendanceLimit = () => {
     if (!program) return "Loading..."

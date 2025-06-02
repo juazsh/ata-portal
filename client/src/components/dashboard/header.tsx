@@ -25,7 +25,6 @@ export function Header({ toggleSidebar }: HeaderProps) {
     logoutMutation.mutate();
   };
 
-  // Get initials for avatar fallback
   const getInitials = (name: string) => {
     return name
       .split(" ")
