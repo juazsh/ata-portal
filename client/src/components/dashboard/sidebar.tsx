@@ -89,11 +89,11 @@ export function Sidebar({ isOpen, setIsOpen }: SidebarProps) {
           icon: UsersIcon,
           path: "/account-info",
         },
-        {
-          name: "Contact Us",
-          icon: PhoneIcon,
-          path: "/contact",
-        },
+        // {
+        //   name: "Contact Us",
+        //   icon: PhoneIcon,
+        //   path: "/contact",
+        // },
         {
           name: "Sign Out",
           icon: XIcon,
