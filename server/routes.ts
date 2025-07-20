@@ -4,7 +4,7 @@ import { setupAuth } from "./auth";
 import { registerAuthRoutes } from "./routes/auth";
 import { registerRegistrationRoutes } from "./routes/registrations";
 import { registerDemoRegistrationRoutes } from "./routes/demo-registrations";
-import { registerClassSessionRoutes } from "./routes/class-sessions";
+import { registerSessionRoutes } from "./routes/sessions";
 import { registerUserRoutes } from "./routes/users";
 import { registerStudentProgressRoutes } from "./routes/student-progress";
 import { registerStudentRoutes } from "./routes/students";
@@ -18,7 +18,10 @@ import { registerEnrollmentRoutes } from "./routes/enrollments";
 import { registerDiscountCodeRoutes } from "./routes/discount-codes";
 import { registerPayPalRoutes } from "./routes/paypal";
 import { registerPasswordResetRoutes } from "./routes/password-reset";
+import { registerPlanRoutes } from "./routes/plans";
 import { registerCronTestRoutes } from "./routes/test-cron";
+import { registerLocationRoutes } from "./routes/locations";
+
 import transactionsRouter from './routes/transactions';
 
 export async function registerRoutes(app: Express): Promise<Server> {
@@ -28,7 +31,9 @@ export async function registerRoutes(app: Express): Promise<Server> {
   registerPasswordResetRoutes(app);
   registerRegistrationRoutes(app, isAuthenticated, hasRole);
   registerDemoRegistrationRoutes(app, isAuthenticated, hasRole);
-  registerClassSessionRoutes(app, isAuthenticated, hasRole);
+  registerLocationRoutes(app, isAuthenticated, hasRole);
+  registerSessionRoutes(app, isAuthenticated, hasRole);
+  registerPlanRoutes(app, isAuthenticated, hasRole);
   registerUserRoutes(app, isAuthenticated, hasRole);
   registerStudentProgressRoutes(app, isAuthenticated, hasRole);
   registerStudentRoutes(app, isAuthenticated, hasRole);
@@ -47,3 +52,4 @@ export async function registerRoutes(app: Express): Promise<Server> {
   const httpServer = createServer(app);
   return httpServer;
 }
+

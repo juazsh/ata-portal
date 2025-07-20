@@ -1,9 +1,11 @@
 import mongoose, { Schema, Document } from 'mongoose';
+import { v4 as uuidv4 } from 'uuid';
 
 export interface IEnrollment extends Document {
-  programId: mongoose.Types.ObjectId;
-  studentId: mongoose.Types.ObjectId;
-  parentId: mongoose.Types.ObjectId;
+  id: string;
+  programId: string;
+  studentId: string;
+  parentId: string;
   subscriptionId?: string;
 
   offeringType: 'Marathon' | 'Sprint';
@@ -37,22 +39,19 @@ export interface IEnrollment extends Document {
   updatedAt: Date;
 }
 
-
 const EnrollmentSchema = new Schema<IEnrollment>(
   {
+    id: { type: String, default: () => uuidv4(), required: true, unique: true },
     programId: {
-      type: Schema.Types.ObjectId,
-      ref: 'Program',
+      type: String,
       required: true
     },
     studentId: {
-      type: Schema.Types.ObjectId,
-      ref: 'User',
+      type: String,
       required: true
     },
     parentId: {
-      type: Schema.Types.ObjectId,
-      ref: 'User',
+      type: String,
       required: true
     },
     subscriptionId: {

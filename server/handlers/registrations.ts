@@ -70,18 +70,18 @@ export const createRegistration = async (req: Request, res: Response) => {
       ? firstPaymentAmount + (firstPaymentAmount * taxPercent)
       : firstPaymentAmount + (firstPaymentAmount * taxPercent) + (firstPaymentAmount * adminFee);
 
-    if( registrationData.discountCode ) {
-      let { valid, code, percent } = await isCodeValid(registrationData.discountCode);
-      if(valid) {
-        firstPaymentAmount =  firstPaymentAmount - (firstPaymentAmount * (percent! / 100));
-        savedRegistration.discountCode = code.code;
-        savedRegistration.discountPercent = percent!;
-      } else {
-        return res.status(400).json({
-          message: "Invalid discount code"
-        });
-      }
-    }
+    // if( registrationData.discountCode ) {
+    //   let { valid, code, percent } = await isCodeValid(registrationData.discountCode);
+    //   if(valid) {
+    //     firstPaymentAmount =  firstPaymentAmount - (firstPaymentAmount * (percent! / 100));
+    //     savedRegistration.discountCode = code.code;
+    //     savedRegistration.discountPercent = percent!;
+    //   } else {
+    //     return res.status(400).json({
+    //       message: "Invalid discount code"
+    //     });
+    //   }
+    // }
     savedRegistration.firstPaymentAmount = firstPaymentAmount;
     
     if (registrationData.paymentMethod === 'credit-card') {

@@ -1,13 +1,20 @@
-import { InMemoryStore } from './InMemoryStore';
-import { Offering, Program } from '../models/program';
-import type { IOffering, IProgram } from '../models/program';
+import { store } from './store';
+import { Offering } from '../models/offering';
+import { Program } from '../models/program';
+import type { IOffering } from '../models/offering';
+import type { IProgram } from '../models/program';
 
 export async function loadInMemoryStore() {
-  const store = InMemoryStore.getInstance();
-  const programs: IProgram[] = await Program.find({}).lean();
-  store.loadPrograms(programs);
-  const offerings: IOffering[] = await Offering.find({}).lean();
-  store.loadOfferings(offerings);
+  try {
+    const offerings: IOffering[] = await Offering.find({}).lean();
+    store.loadOfferings(offerings);
 
-  console.log('[InMemoryStore] Loaded offerings and programs into memory.');
+    const programs: IProgram[] = await Program.find({}).lean();
+    store.loadPrograms(programs);
+
+    console.log('[InMemoryStore] Loaded offerings and programs into memory.');
+  } catch (error) {
+    console.error('[InMemoryStore] Error loading data:', error);
+    throw error;
+  }
 } 

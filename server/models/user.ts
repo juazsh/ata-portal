@@ -1,12 +1,14 @@
 import mongoose, { Schema, Document } from 'mongoose';
 import { hashPassword, comparePassword, isPasswordHashed } from '../utils/password-utils';
+import { v4 as uuidv4 } from 'uuid';
 
 export enum UserRole {
   OWNER = 'owner',
+  LOCATION_MANAGER = 'location_manager',
   ADMIN = 'admin',
-  PARENT = 'parent',
+  TEACHER = 'teacher',
   STUDENT = 'student',
-  TEACHER = 'teacher'
+  PARENT = 'parent'
 }
 
 export interface IAddress {
@@ -43,6 +45,7 @@ export interface ISubjectProgress {
 }
 
 export interface IUser extends Document {
+  id: string;
   firstName: string;
   lastName: string;
   email: string;
@@ -54,13 +57,16 @@ export interface IUser extends Document {
   dateOfBirth?: Date;
   createdAt: Date;
   updatedAt: Date;
-  parentId?: mongoose.Types.ObjectId;
-  students?: mongoose.Types.ObjectId[];
+  parentId?: string;
+  students?: string[];
   active: boolean;
   stripeCustomerId?: string;
   paypalPayerId?: string;
 
-  location?: string;
+  
+  locationId?: string;
+
+  
   level?: string;
   progress?: number;
   achievements?: IAchievement[];
@@ -106,6 +112,7 @@ const SubjectProgressSchema = new Schema<ISubjectProgress>({
 
 const UserSchema = new Schema<IUser>(
   {
+    id: { type: String, default: () => uuidv4(), required: true, unique: true },
     firstName: { type: String, required: true, trim: true },
     lastName: { type: String, required: true, trim: true },
     email: {
@@ -139,20 +146,31 @@ const UserSchema = new Schema<IUser>(
     },
     dateOfBirth: { type: Date, required: false },
     parentId: {
-      type: Schema.Types.ObjectId,
-      ref: 'User',
+      type: String,
       required: false
     },
     students: [{
-      type: Schema.Types.ObjectId,
-      ref: 'User',
+      type: String,
       required: false
     }],
     active: { type: Boolean, default: true },
     stripeCustomerId: { type: String, required: false },
-    paypalPayerId: {type: String, required: false},
+    paypalPayerId: { type: String, required: false },
 
-    location: { type: String, required: false },
+    
+    locationId: { 
+      type: String, 
+      required: function() {
+        
+        return [
+          UserRole.LOCATION_MANAGER,
+          UserRole.ADMIN,
+          UserRole.TEACHER
+        ].includes(this.role);
+      }
+    },
+
+    // Student/Progress specific fields
     level: { type: String, required: false },
     progress: { type: Number, required: false, default: 0 },
     achievements: [AchievementSchema],
@@ -164,19 +182,51 @@ const UserSchema = new Schema<IUser>(
   { timestamps: true }
 );
 
+
 UserSchema.pre('save', async function (next) {
-  if (!this.isModified('password')) return next();
-  try {
-    if (!isPasswordHashed(this.password)) {
-      console.log('Hashing password in pre-save hook');
-      this.password = await hashPassword(this.password);
-    } else {
-      console.log('Password already hashed, skipping hash in pre-save hook');
+
+  if (this.isModified('password')) {
+    try {
+      if (!isPasswordHashed(this.password)) {
+        console.log('Hashing password in pre-save hook');
+        this.password = await hashPassword(this.password);
+      } else {
+        console.log('Password already hashed, skipping hash in pre-save hook');
+      }
+    } catch (error: any) {
+      return next(error);
     }
-    next();
-  } catch (error: any) {
-    next(error);
   }
+
+  if (this.isModified('role') || this.isModified('locationId')) {
+    const locationRequiredRoles = [
+      UserRole.LOCATION_MANAGER,
+      UserRole.ADMIN,
+      UserRole.TEACHER
+    ];
+
+    const locationOptionalRoles = [
+      UserRole.STUDENT,
+      UserRole.PARENT
+    ];
+
+    const locationForbiddenRoles = [
+      UserRole.OWNER
+    ];
+
+    if (locationRequiredRoles.includes(this.role)) {
+      if (!this.locationId) {
+        return next(new Error(`${this.role} role requires a location assignment`));
+      }
+    } else if (locationForbiddenRoles.includes(this.role)) {
+      if (this.locationId) {
+        this.locationId = undefined; 
+      }
+    }
+   
+  }
+
+  next();
 });
 
 UserSchema.methods.comparePassword = async function (candidatePassword: string): Promise<boolean> {
@@ -194,7 +244,46 @@ UserSchema.methods.comparePassword = async function (candidatePassword: string):
   }
 };
 
-const User = mongoose.models.User || mongoose.model<IUser>('User', UserSchema);
-UserSchema.index({ username: 1 }, { unique: true, sparse: true });
-export default User;
+UserSchema.methods.isOwner = function(): boolean {
+  return this.role === UserRole.OWNER;
+};
 
+UserSchema.methods.isLocationSpecific = function(): boolean {
+  return [
+    UserRole.LOCATION_MANAGER,
+    UserRole.ADMIN,
+    UserRole.TEACHER
+  ].includes(this.role);
+};
+
+UserSchema.methods.canAccessLocation = function(locationId: string): boolean {
+  if (this.role === UserRole.OWNER) {
+    return true;
+  }
+  
+  if (this.isLocationSpecific()) {
+    return this.locationId === locationId;
+  }
+  
+  if ([UserRole.PARENT, UserRole.STUDENT].includes(this.role)) {
+    return !this.locationId || this.locationId === locationId;
+  }
+  
+  return false;
+};
+
+UserSchema.methods.hasGlobalAccess = function(): boolean {
+  return this.role === UserRole.OWNER;
+};
+
+// Indexes
+UserSchema.index({ username: 1 }, { unique: true, sparse: true });
+UserSchema.index({ email: 1 }, { unique: true });
+UserSchema.index({ role: 1 });
+UserSchema.index({ locationId: 1 });
+UserSchema.index({ parentId: 1 });
+UserSchema.index({ active: 1 });
+
+const User = mongoose.models.User || mongoose.model<IUser>('User', UserSchema);
+
+export default User;

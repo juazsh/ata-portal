@@ -3,7 +3,7 @@ import { Route, useLocation, useRoute } from "wouter";
 import { Header } from "@/components/dashboard/header";
 import { Sidebar } from "@/components/dashboard/sidebar";
 import StudentMenu from "@/components/dashboard/student-menu";
-import ProgramsPage from "@/components/dashboard/programs/program-page"
+import ProgramManagement from "@/components/dashboard/owner-dashboard/program";
 import { useAuth } from "@/hooks/use-auth";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
@@ -30,13 +30,19 @@ import { PaymentMethodModal } from "@/components/dashboard/payment-method-modal"
 import { ConfirmDialog } from "@/components/ui/confirm-dialog";
 import { useToast } from "@/hooks/use-toast";
 import { StudentManagement } from "@/components/dashboard/student-management";
-import ClassSessionsPage from "@/components/class-session/class-session-page";
+import SessionsPage from "@/components/dashboard/owner-dashboard/session";
+import PlansPage from "@/components/dashboard/owner-dashboard/plan";
+import OfferingManagement from "@/components/dashboard/owner-dashboard/offering";
+import DiscountCodeManagement from "@/components/dashboard/owner-dashboard/discount-code";
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import StudentEnrollmentDetails from "@/pages/student-enrollment-details";
 import AccountInfoPage from "@/components/dashboard/account-info-page";
 import TransactionHistoryPage from "@/components/dashboard/transaction-history-page";
 import PaymentInfoPage from "@/components/dashboard/payment-info-page";
+import InternalUserManagement from "@/components/dashboard/owner-dashboard/user";
+import LocationManagement from "@/components/dashboard/owner-dashboard/location";
+import ScheduleManagement from "@/components/dashboard/owner-dashboard/schedule";
 
 interface PaymentMethod {
   id: string;
@@ -99,8 +105,13 @@ export default function Dashboard() {
   const [isAddStudentMatch] = useRoute("/add-student");
   const [isAddLocationMatch] = useRoute("/add-location");
   const [isDiscountCode] = useRoute("/discount-codes");
+  const [isUserMatch] = useRoute("/users");
+  const [isLocationMatch] = useRoute("/locations");
   const [isProgramsMatch] = useRoute("/programs");
-  const [isClassSessions] = useRoute("/class-sessions");
+  const [isSchedulesMatch] = useRoute("/schedules");
+  const [isOfferingsMatch] = useRoute("/offerings");
+  const [isSessions] = useRoute("/sessions");
+  const [isPlans] = useRoute("/plans");
   const [isEnrollmentDetailsMatch] = useRoute("/student/:username/enrollment/:enrollmentId");
 
   return (
@@ -114,14 +125,20 @@ export default function Dashboard() {
         {isAddLocationMatch && <AddLocationPage />}
         {isPaymentInfoMatch && <PaymentInfoPage />}
         {isTransactionHistoryMatch && <TransactionHistoryPage />}
-        {isProgramsMatch && <ProgramsPage />}
+        {isProgramsMatch && <ProgramManagement />}
         {isAccountInfoMatch && <AccountInfoPage />}
         {isContactMatch && <ContactPage />}
         {isProgressMatch && <ProgressPage />}
         {isClassesMatch && <ClassesPage />}
+        {isUserMatch && <InternalUserManagement />}
         {isAddTeacherMatch && <AddTeacherPage />}
         {isAddStudentMatch && <AddStudentPage />}
-        {isClassSessions && <ClassSessionsPage />}
+        {isSessions && <SessionsPage />}
+        {isPlans && <PlansPage />}
+        {isLocationMatch && <LocationManagement />}
+        {isOfferingsMatch && <OfferingManagement />}
+        {isDiscountCode && <DiscountCodeManagement />}
+        {isSchedulesMatch && <ScheduleManagement />}
         {isEnrollmentDetailsMatch && <StudentEnrollmentDetails />}
 
         {!isRootMatch &&
@@ -130,13 +147,19 @@ export default function Dashboard() {
           !isPaymentInfoMatch &&
           !isTransactionHistoryMatch &&
           !isProgramsMatch &&
-          !isClassSessions &&
+          !isSessions &&
           !isAccountInfoMatch &&
           !isContactMatch &&
           !isProgressMatch &&
           !isClassesMatch &&
           !isAddTeacherMatch &&
           !isEnrollmentDetailsMatch &&
+          !isPlans &&
+          !isLocationMatch &&
+          !isUserMatch &&
+          !isOfferingsMatch &&
+          !isDiscountCode &&
+          !isSchedulesMatch &&
           !isAddStudentMatch && <HomePage />}
       </main>
     </div>
@@ -371,80 +394,6 @@ function AddLocationPage() {
     </div>
   );
 }
-
-
-function SmallProgressChart() {
-
-  const data = [
-    { month: 'Jan', score: 65 },
-    { month: 'Feb', score: 72 },
-    { month: 'Mar', score: 68 },
-    { month: 'Apr', score: 75 },
-    { month: 'May', score: 78 },
-  ];
-
-  return (
-    <div className="w-full h-full flex items-center justify-center">
-      <svg viewBox="0 0 300 100" className="w-full h-full">
-
-        <line x1="30" y1="90" x2="290" y2="90" stroke="currentColor" strokeOpacity="0.2" />
-        <line x1="30" y1="10" x2="30" y2="90" stroke="currentColor" strokeOpacity="0.2" />
-
-
-        <polyline
-          points="
-            50,${90 - data[0].score * 0.8} 
-            100,${90 - data[1].score * 0.8} 
-            150,${90 - data[2].score * 0.8} 
-            200,${90 - data[3].score * 0.8} 
-            250,${90 - data[4].score * 0.8}
-          "
-          fill="none"
-          stroke="hsl(215, 100%, 50%)"
-          strokeWidth="2"
-        />
-
-
-        {data.map((point, i) => {
-          const x = 50 + i * 50;
-          const y = 90 - point.score * 0.8;
-          return (
-            <circle
-              key={i}
-              cx={x}
-              cy={y}
-              r="4"
-              fill="hsl(215, 100%, 50%)"
-            />
-          );
-        })}
-
-
-        {data.map((point, i) => {
-          const x = 50 + i * 50;
-          return (
-            <text
-              key={i}
-              x={x}
-              y="100"
-              textAnchor="middle"
-              fontSize="10"
-              fill="currentColor"
-              fillOpacity="0.6"
-            >
-              {point.month}
-            </text>
-          );
-        })}
-      </svg>
-    </div>
-  );
-}
-
-
-
-
-
 
 
 function ContactPage() {

@@ -36,11 +36,16 @@ function Router() {
       <ProtectedRoute path="/contact" component={Dashboard} />
       <ProtectedRoute path="/progress" component={Dashboard} />
       <ProtectedRoute path="/classes" component={Dashboard} />
+      <ProtectedRoute path="/offerings" component={Dashboard} />
       <ProtectedRoute path="/programs" component={Dashboard} />
+      <ProtectedRoute path="/plans" component={Dashboard} />
       <ProtectedRoute path="/add-teacher" component={Dashboard} />
       <ProtectedRoute path="/add-student" component={Dashboard} />
-      <ProtectedRoute path="/class-sessions" component={Dashboard} />
+      <ProtectedRoute path="/sessions" component={Dashboard} />
+      <ProtectedRoute path="/locations" component={Dashboard} />
+      <ProtectedRoute path="/users" component={Dashboard} />
       <ProtectedRoute path="/discount-codes" component={Dashboard} />
+      <ProtectedRoute path="/schedules" component={Dashboard} />
       <ProtectedRoute path="/student/:username/enrollment/:enrollmentId" component={Dashboard} /> 
 
 

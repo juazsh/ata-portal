@@ -1,13 +1,14 @@
 import type { Express } from "express";
 import { UserRole } from "../models/user";
 import {
-  addDiscountCode,
-  getDiscountCodes,
-  getDiscountCodeByCode,
+  getAllDiscountCodes,
+  getDiscountCodeById,
+  createDiscountCode,
   updateDiscountCode,
   deleteDiscountCode,
-  verifyDiscountCode,
-  updateExpirationDate
+  getDiscountCodesByLocation,
+  validateDiscountCode,
+  useDiscountCode
 } from "../handlers/discount-codes";
 
 export function registerDiscountCodeRoutes(
@@ -15,11 +16,48 @@ export function registerDiscountCodeRoutes(
   isAuthenticated: any,
   hasRole: (roles: UserRole[]) => any
 ) {
-  app.post("/api/discount-codes", isAuthenticated, hasRole([UserRole.ADMIN, UserRole.OWNER]), addDiscountCode);
-  app.get("/api/discount-codes", isAuthenticated, hasRole([UserRole.ADMIN, UserRole.OWNER]), getDiscountCodes);
-  app.get("/api/discount-codes/:code", isAuthenticated, hasRole([UserRole.ADMIN, UserRole.OWNER]), getDiscountCodeByCode);
-  app.put("/api/discount-codes/:code", isAuthenticated, hasRole([UserRole.ADMIN, UserRole.OWNER]), updateDiscountCode);
-  app.delete("/api/discount-codes/:code", isAuthenticated, hasRole([UserRole.ADMIN, UserRole.OWNER]), deleteDiscountCode);
-  app.patch("/api/discount-codes/:code/expire", isAuthenticated, hasRole([UserRole.ADMIN, UserRole.OWNER]), updateExpirationDate);
-  app.get("/api/discount-codes/:code/verify", verifyDiscountCode);
+  // Public routes for checkout/validation (no authentication required)
+  app.post("/api/discount-codes/validate", validateDiscountCode);
+  app.post("/api/discount-codes/use", useDiscountCode);
+  
+  // Authenticated routes - location-specific roles can manage codes for their location
+  app.get("/api/discount-codes", 
+    isAuthenticated, 
+    hasRole([UserRole.OWNER, UserRole.LOCATION_MANAGER, UserRole.ADMIN]), 
+    getAllDiscountCodes
+  );
+  
+  app.get("/api/discount-codes/:codeId", 
+    isAuthenticated, 
+    hasRole([UserRole.OWNER, UserRole.LOCATION_MANAGER, UserRole.ADMIN]), 
+    getDiscountCodeById
+  );
+  
+  // Location-specific discount codes
+  app.get("/api/locations/:locationId/discount-codes", 
+    isAuthenticated, 
+    hasRole([UserRole.OWNER, UserRole.LOCATION_MANAGER, UserRole.ADMIN]), 
+    getDiscountCodesByLocation
+  );
+  
+  // Create discount codes - location managers and above
+  app.post("/api/discount-codes", 
+    isAuthenticated, 
+    hasRole([UserRole.OWNER, UserRole.LOCATION_MANAGER, UserRole.ADMIN]), 
+    createDiscountCode
+  );
+  
+  // Update discount codes - location managers and above
+  app.put("/api/discount-codes/:codeId", 
+    isAuthenticated, 
+    hasRole([UserRole.OWNER, UserRole.LOCATION_MANAGER, UserRole.ADMIN]), 
+    updateDiscountCode
+  );
+  
+  // Delete discount codes - location managers and above
+  app.delete("/api/discount-codes/:codeId", 
+    isAuthenticated, 
+    hasRole([UserRole.OWNER, UserRole.LOCATION_MANAGER, UserRole.ADMIN]), 
+    deleteDiscountCode
+  );
 }

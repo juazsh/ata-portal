@@ -1,81 +1,36 @@
 import { Request, Response } from "express";
-import { Program, Offering } from "../models/program";
+import { Program } from "../models/program";
+import { Offering } from "../models/offering";
+import { Module } from "../models/program";
 import mongoose from "mongoose";
-import Stripe from 'stripe';
-import { createPayPalPlanForProduct, createPayPalProduct } from "./helpers/paypal-client";
 
-const stripe = new Stripe(process.env.STRIPE_SECRET_KEY || '', {
-  apiVersion: '2025-03-31.basil',
-});
-
-export const getProgramsByOffering = async (req: Request, res: Response) => {
-  try {
-    const { offeringId } = req.params;
-
-    if (!mongoose.Types.ObjectId.isValid(offeringId)) {
-      return res.status(400).json({
-        message: "Invalid offering ID format"
-      });
-    }
-
-    const programs = await Program.find({ offering: offeringId })
-      .populate("offering", "name description")
-      .populate({
-        path: "modules",
-        select: "name description topics estimatedDuration",
-        populate: {
-          path: "topics",
-          select: "name description estimatedDuration taughtBy",
-        },
-      })
-      .select("name description price googleClassroomLink estimatedDuration offering modules createdAt updatedAt");
-
-    res.status(200).json({
-      count: programs.length,
-      programs
-    });
-  } catch (error) {
-    console.error(`Error fetching programs by offering ID:`, error);
-    res.status(500).json({
-      message: `Failed to fetch programs by offering ID`,
-      error: (error as Error).message
-    });
-  }
-};
 export const getAllPrograms = async (req: Request, res: Response) => {
   try {
     const { offeringType, offering } = req.query;
-
-    let query = Program.find();
+    let query;
 
     if (offeringType) {
-      const offerings = await Offering.find({ offeringType });
-      const offeringIds = offerings.map(o => o._id);
-
+      const offerings = await Offering.find({ name: offeringType });
+      const offeringIds = offerings.map(o => o.id);
       query = Program.find({ offering: { $in: offeringIds } });
     } else if (offering) {
-      // Add this condition to support filtering by offering ID
-      if (mongoose.Types.ObjectId.isValid(offering as string)) {
-        query = Program.find({ offering: offering });
-      }
+      query = Program.find({ offering });
+    } else {
+      query = Program.find();
     }
 
     const programs = await query
-      .populate("offering", "name description description2")
-      .populate({
-        path: "modules",
-        select: "name description topics estimatedDuration",
-        populate: {
-          path: "topics",
-          select: "name description estimatedDuration taughtBy",
-        },
-      })
-      .select("name description price googleClassroomLink estimatedDuration offering modules createdAt updatedAt");
+      .select("id name description estimatedDuration image offering modules stripeProductId paypalProductId googleClassroomLink")
+      .sort({ createdAt: -1 })
+      .lean();
 
     res.status(200).json(programs);
   } catch (error) {
     console.error("Error fetching programs:", error);
-    res.status(500).json({ message: "Failed to fetch programs", error: (error as Error).message });
+    res.status(500).json({
+      message: "Failed to fetch programs",
+      error: (error as Error).message,
+    });
   }
 };
 
@@ -83,21 +38,13 @@ export const getProgramById = async (req: Request, res: Response) => {
   try {
     const { programId } = req.params;
 
-    if (!mongoose.Types.ObjectId.isValid(programId)) {
-      return res.status(400).json({ message: "Invalid Program ID format" });
+    if (!programId) {
+      return res.status(400).json({ message: "Program ID is required" });
     }
 
-    const program = await Program.findById(programId)
-      .populate("offering", "name offeringType description")
-      .populate({
-        path: "modules",
-        select: "name description topics estimatedDuration",
-        populate: {
-          path: "topics",
-          select: "name description estimatedDuration taughtBy",
-        },
-      })
-      .select("name description price googleClassroomLink estimatedDuration offering modules createdAt updatedAt");
+    const program = await Program.findOne({ id: programId })
+      .select("id name description estimatedDuration image offering modules stripeProductId paypalProductId googleClassroomLink")
+      .lean();
 
     if (!program) {
       return res.status(404).json({ message: "Program not found" });
@@ -105,250 +52,375 @@ export const getProgramById = async (req: Request, res: Response) => {
 
     res.status(200).json(program);
   } catch (error) {
-    console.error("Error fetching program by ID:", error);
-    res.status(500).json({ message: "Failed to fetch program", error: (error as Error).message });
+    console.error("Error fetching program:", error);
+    res.status(500).json({
+      message: "Failed to fetch program",
+      error: (error as Error).message,
+    });
+  }
+};
+
+export const getProgramsByOffering = async (req: Request, res: Response) => {
+  try {
+    const { offeringId } = req.params;
+
+    if (!offeringId) {
+      return res.status(400).json({ message: "Offering ID is required" });
+    }
+
+    const offering = await Offering.findOne({ id: offeringId });
+    if (!offering) {
+      return res.status(404).json({ message: "Offering not found" });
+    }
+
+    if (offering.name === "Marathon") {
+      return res.status(400).json({ message: "Marathon offerings do not have associated programs" });
+    }
+
+    const programs = await Program.find({ offering: offeringId })
+      .select("id name description estimatedDuration image offering modules stripeProductId paypalProductId googleClassroomLink")
+      .sort({ createdAt: -1 })
+      .lean();
+
+    res.status(200).json(programs);
+  } catch (error) {
+    console.error(`Error fetching programs by offering ID:`, error);
+    res.status(500).json({
+      message: `Failed to fetch programs by offering ID`,
+      error: (error as Error).message,
+    });
   }
 };
 
 export const addProgram = async (req: Request, res: Response) => {
   try {
-    const { name, description, price, googleClassroomLink, estimatedDuration, offering: offeringId, modules } = req.body;
+    const { 
+      name, 
+      description, 
+      estimatedDuration, 
+      image, 
+      offering: offeringId, 
+      modules, 
+      googleClassroomLink 
+    } = req.body;
 
-    if (!name || !description || price === undefined || estimatedDuration === undefined || !offeringId) {
-      return res.status(400).json({ message: "Missing required fields: name, description, price, estimatedDuration, offering" });
+    if (!name || !description || estimatedDuration === undefined || !offeringId) {
+      return res.status(400).json({ 
+        message: "Missing required fields: name, description, estimatedDuration, offering" 
+      });
     }
 
-    if (!mongoose.Types.ObjectId.isValid(offeringId)) {
-      return res.status(400).json({ message: "Invalid Offering ID format" });
+    if (typeof name !== 'string' || typeof description !== 'string') {
+      return res.status(400).json({ message: "Name and description must be strings" });
     }
 
-    const offeringExists = await Offering.findById(offeringId);
+    const trimmedName = name.trim();
+    const trimmedDescription = description.trim();
+
+    if (trimmedName.length === 0 || trimmedDescription.length === 0) {
+      return res.status(400).json({ message: "Name and description cannot be empty" });
+    }
+
+    const duration = parseInt(estimatedDuration);
+    if (isNaN(duration) || duration <= 0) {
+      return res.status(400).json({ message: "Estimated duration must be a positive integer" });
+    }
+
+    const offeringExists = await Offering.findOne({ id: offeringId });
     if (!offeringExists) {
       return res.status(404).json({ message: `Offering with ID ${offeringId} not found.` });
     }
 
-    let stripeProductId;
-    try {
-      const stripeProduct = await stripe.products.create({
-        name,
-        description,
-        metadata: {
-          programType: offeringExists.offeringType,
-          estimatedDuration: estimatedDuration.toString()
-        }
-      });
-
-      await stripe.prices.create({
-        product: stripeProduct.id,
-        unit_amount: Math.round(price * 100),
-        currency: 'usd',
-      });
-
-      stripeProductId = stripeProduct.id;
-    } catch (stripeError) {
-      console.error("Stripe product creation error:", stripeError);
+    if (offeringExists.name === "Marathon") {
+      return res.status(400).json({ message: "Cannot create programs for Marathon offerings" });
     }
 
-    let paypalProductId;
-    try {
-      paypalProductId = await createPayPalProduct(name, description);
+    const existingProgram = await Program.findOne({ 
+      name: trimmedName, 
+      offering: offeringId 
+    });
+    if (existingProgram) {
+      return res.status(409).json({ 
+        message: `A program with name "${trimmedName}" already exists in this offering` 
+      });
+    }
 
-      if (paypalProductId) {
-        await createPayPalPlanForProduct(paypalProductId, name, price);
+    if (modules && Array.isArray(modules) && modules.length > 0) {
+      const existingModules = await Module.find({ id: { $in: modules } });
+      if (existingModules.length !== modules.length) {
+        return res.status(400).json({ message: "One or more module IDs are invalid" });
       }
-    } catch (paypalError) {
-      console.error("PayPal product creation error:", paypalError);
+    }
+
+    if (googleClassroomLink && typeof googleClassroomLink === 'string') {
+      const trimmedLink = googleClassroomLink.trim();
+      if (trimmedLink && !isValidUrl(trimmedLink)) {
+        return res.status(400).json({ message: "Invalid Google Classroom URL format" });
+      }
     }
 
     const newProgram = new Program({
-      name,
-      description,
-      price,
-      googleClassroomLink,
-      estimatedDuration,
+      name: trimmedName,
+      description: trimmedDescription,
+      estimatedDuration: duration,
+      image: image?.trim() || undefined,
       offering: offeringId,
       modules: modules || [],
-      stripeProductId,
-      paypalProductId,
+      googleClassroomLink: googleClassroomLink?.trim() || undefined,
     });
 
     const savedProgram = await newProgram.save();
 
-    await Offering.findByIdAndUpdate(offeringId, { $addToSet: { programs: savedProgram._id } });
+    await Offering.findOneAndUpdate(
+      { id: offeringId },
+      { $addToSet: { programs: savedProgram.id } }
+    );
 
-    const populatedProgram = await Program.findById(savedProgram._id)
-      .populate("offering", "name offeringType")
-      .populate("modules", "name estimatedDuration");
+    const populatedProgram = await Program.findOne({ id: savedProgram.id })
+      .select("id name description estimatedDuration image offering modules stripeProductId paypalProductId googleClassroomLink")
+      .lean();
 
     res.status(201).json(populatedProgram);
-  } catch (error) {
-    console.error("Error adding program:", error);
+  } catch (error: any) {
+    console.error("Error creating program:", error);
+    
     if (error instanceof mongoose.Error.ValidationError) {
-      return res.status(400).json({ message: "Validation failed", errors: error.errors });
+      const validationErrors = Object.values(error.errors).map(err => err.message);
+      return res.status(400).json({ 
+        message: "Validation failed", 
+        errors: validationErrors 
+      });
     }
-    res.status(500).json({ message: "Failed to add program", error: (error as Error).message });
+
+    if (error.code === 11000) {
+      return res.status(409).json({ message: "A program with this information already exists" });
+    }
+
+    res.status(500).json({
+      message: "Failed to create program",
+      error: error.message,
+    });
   }
 };
 
 export const updateProgram = async (req: Request, res: Response) => {
   try {
     const { programId } = req.params;
-    const updateData = req.body;
-    const { name, description, price } = updateData;
+    const { 
+      name, 
+      description, 
+      estimatedDuration, 
+      image, 
+      offering: offeringId, 
+      modules, 
+      googleClassroomLink 
+    } = req.body;
 
-    if (!mongoose.Types.ObjectId.isValid(programId)) {
-      return res.status(400).json({ message: "Invalid Program ID format" });
+    if (!programId) {
+      return res.status(400).json({ message: "Program ID is required" });
     }
 
-    const currentProgram = await Program.findById(programId);
-    if (!currentProgram) {
+    const existingProgram = await Program.findOne({ id: programId });
+    if (!existingProgram) {
       return res.status(404).json({ message: "Program not found" });
     }
 
-    if (name || description || price) {
-      if (currentProgram.stripeProductId) {
-        try {
-          await stripe.products.update(currentProgram.stripeProductId, {
-            name: name || currentProgram.name,
-            description: description || currentProgram.description,
-          });
+    const updateData: any = {};
 
-          if (price && price !== currentProgram.price) {
-            await stripe.prices.create({
-              product: currentProgram.stripeProductId,
-              unit_amount: Math.round(price * 100),
-              currency: 'usd',
-            });
-          }
-        } catch (stripeError) {
-          console.error("Stripe product update error:", stripeError);
-        }
+    if (name !== undefined) {
+      if (typeof name !== 'string' || name.trim().length === 0) {
+        return res.status(400).json({ message: "Name must be a non-empty string" });
       }
-
-      if (currentProgram.paypalProductId) {
-        try {
-          const paypalClient = getPayPalClient();
-          const request = new paypal.products.ProductsUpdateRequest(currentProgram.paypalProductId);
-          request.requestBody({
-            name: name || currentProgram.name,
-            description: description || currentProgram.description,
-          });
-
-          await paypalClient.execute(request);
-        } catch (paypalError) {
-          console.error("PayPal product update error:", paypalError);
-        }
+      
+      const trimmedName = name.trim();
+      
+      const duplicateProgram = await Program.findOne({ 
+        name: trimmedName, 
+        offering: offeringId || existingProgram.offering,
+        id: { $ne: programId } 
+      });
+      if (duplicateProgram) {
+        return res.status(409).json({ 
+          message: `A program with name "${trimmedName}" already exists in this offering` 
+        });
       }
+      
+      updateData.name = trimmedName;
     }
 
-    const updatedProgram = await Program.findByIdAndUpdate(
-      programId,
+    if (description !== undefined) {
+      if (typeof description !== 'string' || description.trim().length === 0) {
+        return res.status(400).json({ message: "Description must be a non-empty string" });
+      }
+      updateData.description = description.trim();
+    }
+
+    if (estimatedDuration !== undefined) {
+      const duration = parseInt(estimatedDuration);
+      if (isNaN(duration) || duration <= 0) {
+        return res.status(400).json({ message: "Estimated duration must be a positive integer" });
+      }
+      updateData.estimatedDuration = duration;
+    }
+
+    if (image !== undefined) {
+      updateData.image = image?.trim() || undefined;
+    }
+
+    if (googleClassroomLink !== undefined) {
+      const trimmedLink = googleClassroomLink?.trim();
+      if (trimmedLink && !isValidUrl(trimmedLink)) {
+        return res.status(400).json({ message: "Invalid Google Classroom URL format" });
+      }
+      updateData.googleClassroomLink = trimmedLink || undefined;
+    }
+
+    if (offeringId !== undefined) {
+      const offeringExists = await Offering.findOne({ id: offeringId });
+      if (!offeringExists) {
+        return res.status(404).json({ message: `Offering with ID ${offeringId} not found.` });
+      }
+      if (offeringExists.name === "Marathon") {
+        return res.status(400).json({ message: "Cannot associate programs with Marathon offerings" });
+      }
+
+      if (offeringId !== existingProgram.offering) {
+        await Offering.findOneAndUpdate(
+          { id: existingProgram.offering },
+          { $pull: { programs: programId } }
+        );
+        
+        await Offering.findOneAndUpdate(
+          { id: offeringId },
+          { $addToSet: { programs: programId } }
+        );
+      }
+      
+      updateData.offering = offeringId;
+    }
+
+    if (modules !== undefined) {
+      if (!Array.isArray(modules)) {
+        return res.status(400).json({ message: "Modules must be an array" });
+      }
+      
+      if (modules.length > 0) {
+        const existingModules = await Module.find({ id: { $in: modules } });
+        if (existingModules.length !== modules.length) {
+          return res.status(400).json({ message: "One or more module IDs are invalid" });
+        }
+      }
+      
+      updateData.modules = modules;
+    }
+
+    const updatedProgram = await Program.findOneAndUpdate(
+      { id: programId },
       updateData,
       { new: true, runValidators: true }
-    ).populate("offering", "name offeringType description")
-      .populate({
-        path: "modules",
-        select: "name description topics estimatedDuration",
-        populate: {
-          path: "topics",
-          select: "name description estimatedDuration taughtBy",
-        },
-      })
-      .select("name description price googleClassroomLink estimatedDuration offering modules stripeProductId paypalProductId createdAt updatedAt");
+    )
+      .select("id name description estimatedDuration image offering modules stripeProductId paypalProductId googleClassroomLink")
+      .lean();
 
     res.status(200).json(updatedProgram);
-  } catch (error) {
+  } catch (error: any) {
     console.error("Error updating program:", error);
+    
     if (error instanceof mongoose.Error.ValidationError) {
-      return res.status(400).json({ message: "Validation failed", errors: error.errors });
+      const validationErrors = Object.values(error.errors).map(err => err.message);
+      return res.status(400).json({ 
+        message: "Validation failed", 
+        errors: validationErrors 
+      });
     }
-    res.status(500).json({ message: "Failed to update program", error: (error as Error).message });
+
+    if (error.code === 11000) {
+      return res.status(409).json({ message: "A program with this information already exists" });
+    }
+
+    res.status(500).json({
+      message: "Failed to update program",
+      error: error.message,
+    });
   }
 };
 
 export const deleteProgram = async (req: Request, res: Response) => {
   try {
     const { programId } = req.params;
-    if (!mongoose.Types.ObjectId.isValid(programId)) {
-      return res.status(400).json({ message: "Invalid Program ID format" });
+
+    if (!programId) {
+      return res.status(400).json({ message: "Program ID is required" });
     }
 
-    const programToDelete = await Program.findById(programId);
-    if (!programToDelete) {
+    const deletedProgram = await Program.findOneAndDelete({ id: programId });
+
+    if (!deletedProgram) {
       return res.status(404).json({ message: "Program not found" });
     }
 
-    if (programToDelete.stripeProductId) {
-      try {
-        await stripe.products.update(programToDelete.stripeProductId, {
-          active: false
-        });
-      } catch (stripeError) {
-        console.error("Error deactivating Stripe product:", stripeError);
+    if (deletedProgram.offering) {
+      await Offering.findOneAndUpdate(
+        { id: deletedProgram.offering },
+        { $pull: { programs: deletedProgram.id } }
+      );
+    }
+
+    res.status(200).json({ 
+      message: "Program deleted successfully", 
+      deletedProgram: {
+        id: deletedProgram.id,
+        name: deletedProgram.name
       }
-    }
-
-    if (programToDelete.paypalProductId) {
-      try {
-        const paypalClient = getPayPalClient();
-        const request = new paypal.products.ProductsUpdateRequest(programToDelete.paypalProductId);
-        request.requestBody({
-          description: `[ARCHIVED] ${programToDelete.description}`
-        });
-        await paypalClient.execute(request);
-      } catch (paypalError) {
-        console.error("Error archiving PayPal product:", paypalError);
-      }
-    }
-
-    const deletedProgram = await Program.findByIdAndDelete(programId);
-
-    if (deletedProgram?.offering) {
-      await Offering.findByIdAndUpdate(deletedProgram.offering, { $pull: { programs: deletedProgram._id } });
-    }
-
-    res.status(200).json({ message: "Program deleted successfully", programId: deletedProgram?._id });
+    });
   } catch (error) {
     console.error("Error deleting program:", error);
-    res.status(500).json({ message: "Failed to delete program", error: (error as Error).message });
+    res.status(500).json({
+      message: "Failed to delete program",
+      error: (error as Error).message,
+    });
   }
 };
 
 export const getProgramsByOfferingType = async (req: Request, res: Response) => {
   try {
-    console.log("Fetching programs by offering type");
     const { name } = req.params;
 
-    if (!['Marathon', 'Sprint'].includes(name)) {
+    if (!name) {
+      return res.status(400).json({ message: "Offering type name is required" });
+    }
+
+    if (name === "Marathon") {
       return res.status(400).json({
-        message: "Invalid offering type. Must be either 'Marathon' or 'Sprint'"
+        message: "Marathon offerings do not have associated programs"
       });
     }
-    console.log(await Offering.find({}));
+
     const offering = await Offering.findOne({ name });
-    console.log(offering);
+    if (!offering) {
+      return res.status(404).json({ message: "Offering not found" });
+    }
 
-    const programs = await Program.find({ offering: offering._id })
-      .populate("offering", "name offeringType description")
-      .populate({
-        path: "modules",
-        select: "name description topics estimatedDuration",
-        populate: {
-          path: "topics",
-          select: "name description estimatedDuration taughtBy",
-        },
-      })
-      .select("name description price googleClassroomLink estimatedDuration offering modules createdAt updatedAt");
+    const programs = await Program.find({ offering: offering.id })
+      .select("id name description estimatedDuration image offering modules stripeProductId paypalProductId googleClassroomLink")
+      .sort({ createdAt: -1 })
+      .lean();
 
-    res.status(200).json({
-      count: programs.length,
-      programs
-    });
+    res.status(200).json(programs);
   } catch (error) {
-    console.log(`Error fetching programs by offering type:`, error);
+    console.error(`Error fetching programs by offering type:`, error);
     res.status(500).json({
       message: `Failed to fetch programs by offering type`,
-      error: (error as Error).message
+      error: (error as Error).message,
     });
   }
 };
+
+function isValidUrl(url: string): boolean {
+  try {
+    new URL(url);
+    return true;
+  } catch {
+    return false;
+  }
+}

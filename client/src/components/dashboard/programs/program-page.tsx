@@ -5,58 +5,78 @@ import { useAuth } from "@/hooks/use-auth"
 import { useToast } from "@/hooks/use-toast"
 import { PageHeader } from "@/components/ui/page-header"
 import { Button } from "@/components/ui/button"
-import { PlusIcon, LayersIcon } from "lucide-react"
+import { PlusIcon } from "lucide-react"
 import { ProgramList } from "./program-list"
 import { ProgramModal } from "./program-modal"
-import { OfferingModal } from "./offering-modal"
 import { ConfirmDeleteModal } from "./confirm-delete-modal"
 import { ProgramDetailsModal } from "./program-details-modal"
 import { EnrollmentModal } from "./enrollment-modal"
 import { ModuleModal } from "./module-modal"
 import { TopicModal } from "./topic-modal"
 
+interface Program {
+  _id: string;
+  name: string;
+  offering?: {
+    name: string;
+  };
+}
+
+interface Module {
+  _id: string;
+  name: string;
+}
+
+interface Topic {
+  _id: string;
+  name: string;
+}
+
+interface Offering {
+  _id: string;
+  name: string;
+}
+
 function ProgramsPage() {
   const { user } = useAuth()
   const { toast } = useToast()
 
-  const [programs, setPrograms] = useState([])
-  const [offerings, setOfferings] = useState([])
+  const [programs, setPrograms] = useState<Program[]>([])
+  const [offerings, setOfferings] = useState<Offering[]>([])
   const [loading, setLoading] = useState(true)
-  const [error, setError] = useState(null)
+  const [error, setError] = useState<string | null>(null)
   const [programModalOpen, setProgramModalOpen] = useState(false)
-  const [offeringModalOpen, setOfferingModalOpen] = useState(false)
-  const [currentProgram, setCurrentProgram] = useState(null)
+  const [currentProgram, setCurrentProgram] = useState<Program | null>(null)
   const [confirmDeleteOpen, setConfirmDeleteOpen] = useState(false)
-  const [programToDelete, setProgramToDelete] = useState(null)
+  const [programToDelete, setProgramToDelete] = useState<Program | null>(null)
   const [viewDetailOpen, setViewDetailOpen] = useState(false)
-  const [detailProgram, setDetailProgram] = useState(null)
+  const [detailProgram, setDetailProgram] = useState<Program | null>(null)
   const [enrollmentModalOpen, setEnrollmentModalOpen] = useState(false)
-  const [programToEnroll, setProgramToEnroll] = useState(null)
-  const [userStudents, setUserStudents] = useState([])
-  const [paymentMethods, setPaymentMethods] = useState([])
-  const [isModalOpen, setIsModalOpen] = useState(false);
-  const [isLoadingMethods, setIsLoadingMethods] = useState(false);
+  const [programToEnroll, setProgramToEnroll] = useState<Program | null>(null)
+  const [userStudents, setUserStudents] = useState<any[]>([])
+  const [paymentMethods, setPaymentMethods] = useState<any[]>([])
+  const [isModalOpen, setIsModalOpen] = useState(false)
+  const [isLoadingMethods, setIsLoadingMethods] = useState(false)
   const [moduleModalOpen, setModuleModalOpen] = useState(false)
   const [topicModalOpen, setTopicModalOpen] = useState(false)
-  const [currentModule, setCurrentModule] = useState(null)
-  const [currentTopic, setCurrentTopic] = useState(null)
-  const [programModules, setProgramModules] = useState([])
-  const [moduleTopics, setModuleTopics] = useState([])
-  const [selectedProgramId, setSelectedProgramId] = useState(null)
-  const [selectedModuleId, setSelectedModuleId] = useState(null)
+  const [currentModule, setCurrentModule] = useState<Module | null>(null)
+  const [currentTopic, setCurrentTopic] = useState<Topic | null>(null)
+  const [programModules, setProgramModules] = useState<Module[]>([])
+  const [moduleTopics, setModuleTopics] = useState<Topic[]>([])
+  const [selectedProgramId, setSelectedProgramId] = useState<string | null>(null)
+  const [selectedModuleId, setSelectedModuleId] = useState<string | null>(null)
   const [confirmDeleteModuleOpen, setConfirmDeleteModuleOpen] = useState(false)
   const [confirmDeleteTopicOpen, setConfirmDeleteTopicOpen] = useState(false)
-  const [moduleToDelete, setModuleToDelete] = useState(null)
-  const [topicToDelete, setTopicToDelete] = useState(null)
+  const [moduleToDelete, setModuleToDelete] = useState<Module | null>(null)
+  const [topicToDelete, setTopicToDelete] = useState<Topic | null>(null)
 
   const isAdmin = user?.role === "admin" || user?.role === "owner"
 
-  // Fetch data functions
   const fetchPrograms = async () => {
     try {
       setLoading(true)
       const token = localStorage.getItem("auth_token")
-      const headers = token ? { Authorization: `Bearer ${token}` } : {}
+      const headers: HeadersInit = token ? { Authorization: `Bearer ${token}` } : {}
 
       const response = await fetch("/api/programs", { headers })
 
@@ -65,10 +85,10 @@ function ProgramsPage() {
       }
 
       const data = await response.json()
-      setPrograms(data)
+      setPrograms(data.filter((program: Program) => program.offering?.name !== "Marathon"))
     } catch (err) {
       console.error("Error fetching programs:", err)
-      setError(err.message)
+      setError(err instanceof Error ? err.message : "An error occurred")
       toast({
         title: "Error",
         description: "Failed to load programs",
@@ -82,7 +102,7 @@ function ProgramsPage() {
   const fetchOfferings = async () => {
     try {
       const token = localStorage.getItem("auth_token")
-      const headers = token ? { Authorization: `Bearer ${token}` } : {}
+      const headers: HeadersInit = token ? { Authorization: `Bearer ${token}` } : {}
 
       const response = await fetch("/api/offerings", { headers })
 
@@ -91,7 +111,7 @@ function ProgramsPage() {
       }
 
       const data = await response.json()
-      setOfferings(data)
+      setOfferings(data.filter((offering: Offering) => offering.name !== "Marathon"))
     } catch (err) {
       console.error("Error fetching offerings:", err)
       toast({
@@ -130,36 +150,34 @@ function ProgramsPage() {
   }
 
   const fetchPaymentMethods = useCallback(async () => {
-    if (!user?.id) return; // Need user ID
+    if (!user?.id) return;
 
     console.log("Parent: Fetching payment methods...");
     setIsLoadingMethods(true);
     const token = localStorage.getItem("auth_token");
     try {
-      const response = await fetch(`/api/payments/${user.id}`, { // Use the correct API endpoint
+      const response = await fetch(`/api/payments/${user.id}`, {
         headers: { 'Authorization': `Bearer ${token}` }
       });
       if (!response.ok) {
         throw new Error('Failed to fetch payment methods');
       }
       const data = await response.json();
-      // Ensure data is an array, map if necessary to match expected structure
       const formattedMethods = Array.isArray(data) ? data : [];
       setPaymentMethods(formattedMethods);
       console.log("Parent: Payment methods fetched successfully:", formattedMethods);
     } catch (error) {
       console.error("Error fetching payment methods:", error);
-      setPaymentMethods([]); // Reset on error
-      // Show error toast if needed
+      setPaymentMethods([]);
     } finally {
       setIsLoadingMethods(false);
     }
   }, [user?.id]);
 
-  const fetchModulesByProgram = async (programId) => {
+  const fetchModulesByProgram = async (programId: string) => {
     try {
       const token = localStorage.getItem("auth_token")
-      const headers = token ? { Authorization: `Bearer ${token}` } : {}
+      const headers: HeadersInit = token ? { Authorization: `Bearer ${token}` } : {}
 
       const response = await fetch(`/api/programs/${programId}/modules`, { headers })
 
@@ -181,10 +199,10 @@ function ProgramsPage() {
     }
   }
 
-  const fetchTopicsByModule = async (moduleId) => {
+  const fetchTopicsByModule = async (moduleId: string) => {
     try {
       const token = localStorage.getItem("auth_token")
-      const headers = token ? { Authorization: `Bearer ${token}` } : {}
+      const headers: HeadersInit = token ? { Authorization: `Bearer ${token}` } : {}
 
       const response = await fetch(`/api/modules/${moduleId}/topics`, { headers })
 
@@ -210,76 +228,70 @@ function ProgramsPage() {
     fetchPaymentMethods();
   }, [fetchPaymentMethods]);
 
-  // This function will be passed to EnrollmentModal
   const handleCardAdded = async () => {
     console.log("Parent: handleCardAdded triggered, refetching methods.");
-    await fetchPaymentMethods(); // Refetch the list
+    await fetchPaymentMethods();
   };
-  // Handler functions
+
   const handleAddProgram = () => {
     setCurrentProgram(null)
     setProgramModalOpen(true)
   }
 
-  const handleAddOffering = () => {
-    setOfferingModalOpen(true)
-  }
-
-  const handleEditProgram = (program) => {
+  const handleEditProgram = (program: Program) => {
     setCurrentProgram(program)
     setProgramModalOpen(true)
   }
 
-  const handleDeleteProgram = (program) => {
+  const handleDeleteProgram = (program: Program) => {
     setProgramToDelete(program)
     setConfirmDeleteOpen(true)
   }
 
-  const handleViewDetails = async (program) => {
+  const handleViewDetails = async (program: Program) => {
     setDetailProgram(program)
     setSelectedProgramId(program._id)
     await fetchModulesByProgram(program._id)
     setViewDetailOpen(true)
   }
 
-  const handleEnrollClick = (program) => {
+  const handleEnrollClick = (program: Program) => {
     setProgramToEnroll(program)
     setEnrollmentModalOpen(true)
   }
 
-  const handleAddModule = (programId) => {
+  const handleAddModule = (programId: string) => {
     setCurrentModule(null)
     setSelectedProgramId(programId)
     setModuleModalOpen(true)
   }
 
-  const handleEditModule = (module) => {
+  const handleEditModule = (module: Module) => {
     setCurrentModule(module)
     setModuleModalOpen(true)
   }
 
-  const handleDeleteModule = (module) => {
+  const handleDeleteModule = (module: Module) => {
     setModuleToDelete(module)
     setConfirmDeleteModuleOpen(true)
   }
 
-  const handleAddTopic = (moduleId) => {
+  const handleAddTopic = (moduleId: string) => {
     setCurrentTopic(null)
     setSelectedModuleId(moduleId)
     setTopicModalOpen(true)
   }
 
-  const handleEditTopic = (topic) => {
+  const handleEditTopic = (topic: Topic) => {
     setCurrentTopic(topic)
     setTopicModalOpen(true)
   }
 
-  const handleDeleteTopic = (topic) => {
+  const handleDeleteTopic = (topic: Topic) => {
     setTopicToDelete(topic)
     setConfirmDeleteTopicOpen(true)
   }
 
-  // CRUD operations
   const deleteProgram = async () => {
     try {
       const token = localStorage.getItem("auth_token")
@@ -288,7 +300,7 @@ function ProgramsPage() {
         throw new Error("Authentication required")
       }
 
-      const response = await fetch(`/api/programs/${programToDelete._id}`, {
+      const response = await fetch(`/api/programs/${programToDelete?._id}`, {
         method: "DELETE",
         headers: {
           Authorization: `Bearer ${token}`,
@@ -300,7 +312,7 @@ function ProgramsPage() {
         throw new Error(errorData.message || "Failed to delete program")
       }
 
-      setPrograms((prev) => prev.filter((p) => p._id !== programToDelete._id))
+      setPrograms((prev) => prev.filter((p) => p._id !== programToDelete?._id))
 
       toast({
         title: "Success",
@@ -310,7 +322,7 @@ function ProgramsPage() {
       console.error("Error deleting program:", err)
       toast({
         title: "Error",
-        description: err.message || "Failed to delete program",
+        description: err instanceof Error ? err.message : "Failed to delete program",
         variant: "destructive",
       })
     } finally {
@@ -327,7 +339,7 @@ function ProgramsPage() {
         throw new Error("Authentication required")
       }
 
-      const response = await fetch(`/api/modules/${moduleToDelete._id}`, {
+      const response = await fetch(`/api/modules/${moduleToDelete?._id}`, {
         method: "DELETE",
         headers: {
           Authorization: `Bearer ${token}`,
@@ -339,7 +351,7 @@ function ProgramsPage() {
         throw new Error(errorData.message || "Failed to delete module")
       }
 
-      setProgramModules((prev) => prev.filter((m) => m._id !== moduleToDelete._id))
+      setProgramModules((prev) => prev.filter((m) => m._id !== moduleToDelete?._id))
 
       toast({
         title: "Success",
@@ -349,7 +361,7 @@ function ProgramsPage() {
       console.error("Error deleting module:", err)
       toast({
         title: "Error",
-        description: err.message || "Failed to delete module",
+        description: err instanceof Error ? err.message : "Failed to delete module",
         variant: "destructive",
       })
     } finally {
@@ -366,7 +378,7 @@ function ProgramsPage() {
         throw new Error("Authentication required")
       }
 
-      const response = await fetch(`/api/topics/${topicToDelete._id}`, {
+      const response = await fetch(`/api/topics/${topicToDelete?._id}`, {
         method: "DELETE",
         headers: {
           Authorization: `Bearer ${token}`,
@@ -378,7 +390,7 @@ function ProgramsPage() {
         throw new Error(errorData.message || "Failed to delete topic")
       }
 
-      setModuleTopics((prev) => prev.filter((t) => t._id !== topicToDelete._id))
+      setModuleTopics((prev) => prev.filter((t) => t._id !== topicToDelete?._id))
 
       toast({
         title: "Success",
@@ -388,7 +400,7 @@ function ProgramsPage() {
       console.error("Error deleting topic:", err)
       toast({
         title: "Error",
-        description: err.message || "Failed to delete topic",
+        description: err instanceof Error ? err.message : "Failed to delete topic",
         variant: "destructive",
       })
     } finally {
@@ -414,16 +426,10 @@ function ProgramsPage() {
         badge={isAdmin ? { text: user?.role?.toUpperCase(), variant: "outline" } : undefined}
       >
         {isAdmin && (
-          <div className="flex gap-3">
-            <Button onClick={handleAddOffering} className="flex items-center gap-2" variant="outline">
-              <LayersIcon className="h-4 w-4" />
-              Add Offering
-            </Button>
-            <Button onClick={handleAddProgram} className="flex items-center gap-2">
-              <PlusIcon className="h-4 w-4" />
-              Add Program
-            </Button>
-          </div>
+          <Button onClick={handleAddProgram} className="flex items-center gap-2">
+            <PlusIcon className="h-4 w-4" />
+            Add Program
+          </Button>
         )}
       </PageHeader>
 
@@ -442,27 +448,17 @@ function ProgramsPage() {
         />
       </div>
 
-      {/* Modals */}
       <ProgramModal
         open={programModalOpen}
         onOpenChange={setProgramModalOpen}
         currentProgram={currentProgram}
         offerings={offerings}
-        onSuccess={(newOrUpdatedProgram) => {
+        onSuccess={(newOrUpdatedProgram: Program) => {
           if (currentProgram) {
             setPrograms((prev) => prev.map((p) => (p._id === currentProgram._id ? newOrUpdatedProgram : p)))
           } else {
             setPrograms((prev) => [...prev, newOrUpdatedProgram])
           }
-        }}
-      />
-
-      <OfferingModal
-        open={offeringModalOpen}
-        onOpenChange={setOfferingModalOpen}
-        onSuccess={(newOffering) => {
-          setOfferings((prev) => [...prev, newOffering])
-          fetchOfferings()
         }}
       />
 
@@ -482,13 +478,13 @@ function ProgramsPage() {
         topics={moduleTopics}
         selectedModuleId={selectedModuleId}
         isAdmin={isAdmin}
-        onAddModule={() => handleAddModule(detailProgram?._id)}
+        onAddModule={() => handleAddModule(detailProgram?._id || "")}
         onEditModule={handleEditModule}
         onDeleteModule={handleDeleteModule}
         onAddTopic={handleAddTopic}
         onEditTopic={handleEditTopic}
         onDeleteTopic={handleDeleteTopic}
-        onSelectModule={(moduleId) => {
+        onSelectModule={(moduleId: string) => {
           if (selectedModuleId === moduleId) {
             setSelectedModuleId(null)
           } else {
@@ -513,7 +509,7 @@ function ProgramsPage() {
         open={moduleModalOpen}
         onOpenChange={setModuleModalOpen}
         currentModule={currentModule}
-        programId={selectedProgramId}
+        programId={selectedProgramId || ""}
         onSuccess={() => {
           if (selectedProgramId) {
             fetchModulesByProgram(selectedProgramId)
@@ -525,7 +521,7 @@ function ProgramsPage() {
         open={topicModalOpen}
         onOpenChange={setTopicModalOpen}
         currentTopic={currentTopic}
-        moduleId={selectedModuleId}
+        moduleId={selectedModuleId || ""}
         onSuccess={() => {
           if (selectedModuleId) {
             fetchTopicsByModule(selectedModuleId)

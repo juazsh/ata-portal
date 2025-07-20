@@ -5,6 +5,7 @@ import { Link } from "wouter"
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { useToast } from "@/hooks/use-toast"
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from "@/components/ui/dialog"
 import logoImage from "@/assets/images/new_logo.png";
 import smclassroomImg from "@/assets/images/stem-masters-classrom.jpeg";
 import smcodingImg from "@/assets/images/stem-masters-coding.jpeg";
@@ -17,10 +18,66 @@ interface Offering {
   estimatedDuration: number
 }
 
+interface Location {
+  id: string
+  name: string
+  city: string
+  state: string
+}
+
 export default function EnrollmentPage() {
   const [offerings, setOfferings] = useState<Offering[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const { toast } = useToast()
+
+  // Location selection state
+  const [locations, setLocations] = useState<Location[]>([])
+  const [selectedLocation, setSelectedLocation] = useState<string | null>(null)
+  const [showLocationModal, setShowLocationModal] = useState(true)
+  const [isLoadingLocations, setIsLoadingLocations] = useState(false)
+
+  // Fetch locations on mount
+  useEffect(() => {
+    const fetchLocations = async () => {
+      setIsLoadingLocations(true)
+      try {
+        const response = await fetch("/api/locations/public")
+        if (!response.ok) {
+          throw new Error("Failed to fetch locations")
+        }
+        const data = await response.json()
+        setLocations(data)
+      } catch (error) {
+        console.error("Error fetching locations:", error)
+        toast({
+          title: "Error",
+          description: "Failed to load locations. Please try again.",
+          variant: "destructive",
+        })
+      } finally {
+        setIsLoadingLocations(false)
+      }
+    }
+    fetchLocations()
+  }, [toast])
+
+  // Save selected location to localStorage and close modal
+  const handleSelectLocation = (locationId: string) => {
+    setSelectedLocation(locationId)
+    localStorage.setItem("selectedLocationId", locationId)
+    setShowLocationModal(false)
+  }
+
+  // On mount, check if location is already selected
+  useEffect(() => {
+    const savedLocationId = localStorage.getItem("selectedLocationId")
+    if (savedLocationId) {
+      setSelectedLocation(savedLocationId)
+      setShowLocationModal(false)
+    } else {
+      setShowLocationModal(true)
+    }
+  }, [])
 
   useEffect(() => {
     const fetchOfferings = async () => {
@@ -43,12 +100,42 @@ export default function EnrollmentPage() {
         setIsLoading(false)
       }
     }
-
     fetchOfferings()
   }, [toast])
 
   return (
     <div className="min-h-screen bg-gray-100">
+      {/* Location Selection Modal */}
+      <Dialog open={showLocationModal}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle>Select Your Location</DialogTitle>
+            <DialogDescription>
+              Please select your location to continue with enrollment.
+            </DialogDescription>
+          </DialogHeader>
+          {isLoadingLocations ? (
+            <div className="py-8 text-center">Loading locations...</div>
+          ) : (
+            <div className="space-y-3">
+              {locations.length === 0 ? (
+                <div className="text-center text-red-500">No locations available.</div>
+              ) : (
+                locations.map((loc) => (
+                  <Button
+                    key={loc.id}
+                    className={`w-full justify-start ${selectedLocation === loc.id ? "bg-green-500 text-white" : ""}`}
+                    onClick={() => handleSelectLocation(loc.id)}
+                  >
+                    {loc.name} ({loc.city}, {loc.state})
+                  </Button>
+                ))
+              )}
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
       {/* Header Navigation */}
       <header className="bg-white py-4 px-6 shadow-sm">
         <div className="container mx-auto flex justify-between items-center">

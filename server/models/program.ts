@@ -1,115 +1,96 @@
-import mongoose, { Schema, Document, Types } from "mongoose";
-import { InMemoryStore } from '../in-memory/InMemoryStore';
-
+import mongoose, { Schema, Document } from "mongoose";
+import { v4 as uuidv4 } from "uuid";
+import { Offering } from "./offering";
 
 export interface ITopic extends Document {
+  id: string;
   name: string;
   description: string;
   estimatedDuration: number;
   taughtBy?: string;
-  module?: Types.ObjectId;
+  module?: string;
 }
 
-const TopicSchema = new Schema<ITopic>(
+const topicSchema = new Schema<ITopic>(
   {
+    id: { type: String, default: () => uuidv4(), required: true, unique: true },
     name: { type: String, required: true },
     description: { type: String, required: true },
     estimatedDuration: { type: Number, required: true },
     taughtBy: { type: String },
-    module: { type: Schema.Types.ObjectId, ref: "Module", required: false },
+    module: { type: String, required: false },
   },
   { timestamps: true }
 );
 
 export interface IModule extends Document {
+  id: string;
   name: string;
   description: string;
   estimatedDuration: number;
-  program: Types.ObjectId;
-  topics: Types.ObjectId[];
+  program: string;
+  topics: string[];
 }
 
-const ModuleSchema = new Schema<IModule>(
+const moduleSchema = new Schema<IModule>(
   {
+    id: { type: String, default: () => uuidv4(), required: true, unique: true },
     name: { type: String, required: true },
     description: { type: String, required: true },
     estimatedDuration: { type: Number, required: true },
-    program: { type: Schema.Types.ObjectId, ref: "Program", required: true },
-    topics: [{ type: Schema.Types.ObjectId, ref: "Topic" }],
+    program: { type: String, required: true },
+    topics: [{ type: String }],
   },
   { timestamps: true }
 );
 
 export interface IProgram extends Document {
+  id: string;
   name: string;
   description: string;
-  price: number;
-  googleClassroomLink?: string;
   estimatedDuration: number;
-  offering: Types.ObjectId;
-  modules: Types.ObjectId[];
+  image?: string;
+  offering: string;
+  modules: string[];
   stripeProductId?: string;
   paypalProductId?: string;
-  image?: string;
+  googleClassroomLink?: string;
 }
 
-const ProgramSchema = new Schema<IProgram>(
+const programSchema = new Schema<IProgram>(
   {
+    id: { type: String, default: () => uuidv4(), required: true, unique: true },
     name: { type: String, required: true },
     description: { type: String, required: true },
-    price: { type: Number, required: true },
-    googleClassroomLink: { type: String },
     estimatedDuration: { type: Number, required: true },
-    offering: { type: Schema.Types.ObjectId, ref: "Offering", required: true },
-    modules: [{ type: Schema.Types.ObjectId, ref: "Module" }],
+    image: { type: String },
+    offering: { type: String, required: true },
+    modules: [{ type: String }],
     stripeProductId: { type: String },
     paypalProductId: { type: String },
-    image: { type: String },
+    googleClassroomLink: { type: String },
   },
   { timestamps: true }
 );
 
-// --- In-memory hooks for Program ---
-ProgramSchema.post('save', function (doc) {
-  InMemoryStore.getInstance().updateProgram(doc as IProgram);
-});
-ProgramSchema.post('findOneAndUpdate', function (doc) {
-  if (doc) InMemoryStore.getInstance().updateProgram(doc as IProgram);
-});
-ProgramSchema.post('findOneAndDelete', function (doc) {
-  if (doc) InMemoryStore.getInstance().removeProgram(String(doc._id));
-});
-
-export interface IOffering extends Document {
-  name: string;
-  description: string;
-  description2: string;
-  estimatedDuration: number;
-  programs: Types.ObjectId[];
-}
-
-const OfferingSchema = new Schema<IOffering>(
-  {
-    name: { type: String, unique: true, required: true },
-    description: { type: String, required: true },
-    description2: { type: String, required: true },
-    estimatedDuration: { type: Number, required: true },
-    programs: [{ type: Schema.Types.ObjectId, ref: "Program" }],
-  },
-  { timestamps: true }
-);
-
-OfferingSchema.post('save', function (doc) {
-  InMemoryStore.getInstance().updateOffering(doc as IOffering);
-});
-OfferingSchema.post('findOneAndUpdate', function (doc) {
-  if (doc) InMemoryStore.getInstance().updateOffering(doc as IOffering);
-});
-OfferingSchema.post('findOneAndDelete', function (doc) {
-  if (doc) InMemoryStore.getInstance().removeOffering(String(doc._id));
+programSchema.pre("save", async function (next) {
+  try {
+    const offering = await Offering.findOne({ id: this.get("offering") });
+    
+    if (!offering) {
+      throw new Error("Offering not found");
+    }
+    
+    if (offering.name === "Marathon") {
+      throw new Error("Programs cannot be associated with Marathon offerings");
+    }
+    
+    next();
+  } catch (error) {
+    next(error as Error);
+  }
 });
 
-export const Topic = mongoose.models.Topic || mongoose.model<ITopic>("Topic", TopicSchema);
-export const Module = mongoose.models.Module || mongoose.model<IModule>("Module", ModuleSchema);
-export const Program = mongoose.models.Program || mongoose.model<IProgram>("Program", ProgramSchema);
-export const Offering = mongoose.models.Offering || mongoose.model<IOffering>("Offering", OfferingSchema);
+export const Topic = mongoose.model<ITopic>("Topic", topicSchema);
+export const Module = mongoose.model<IModule>("Module", moduleSchema);
+export const Program = mongoose.model<IProgram>("Program", programSchema);

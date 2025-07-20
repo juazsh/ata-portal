@@ -1,22 +1,20 @@
 import mongoose, { Schema, Document, Types } from "mongoose";
+import { v4 as uuidv4 } from 'uuid';
 
 export interface IRegistration extends Document {
-
+  id: string;
   parentFirstName: string;
   parentLastName: string;
   parentEmail: string;
   parentPhone: string;
 
-
   studentFirstName: string;
   studentLastName: string;
   studentDOB: Date;
 
-
-  programId: Types.ObjectId;
-  offeringId: Types.ObjectId;
+  programId: string;
+  offeringId: string;
   enrollmentDate: Date;
-
 
   paymentMethod: "paypal" | "credit-card";
   firstPaymentAmount: number;
@@ -33,22 +31,18 @@ export interface IRegistration extends Document {
   autoPayEnabled?: boolean;
   autoPayAmount?: number;
 
-
   stripeCustomerId?: string;
   stripeSubscriptionId?: string;
   stripePaymentIntentId?: string;
   stripePaymentMethodId?: string;
 
-
   paypalOrderId?: string;
   paypalSubscriptionId?: string;
   paypalPayerId?: string;
 
-
   isRegistrationComplete: boolean;
   isRegLinkedWithEnrollment: boolean;
   isUserSetup: boolean;
-
 
   createdAt?: Date;
   updatedAt?: Date;
@@ -56,22 +50,19 @@ export interface IRegistration extends Document {
 
 const RegistrationSchema = new Schema<IRegistration>(
   {
-
+    id: { type: String, default: () => uuidv4(), required: true, unique: true },
     parentFirstName: { type: String, required: true },
     parentLastName: { type: String, required: true },
     parentEmail: { type: String, required: true },
     parentPhone: { type: String, required: true },
 
-
     studentFirstName: { type: String, required: true },
     studentLastName: { type: String, required: true },
     studentDOB: { type: Date, required: true },
 
-
-    programId: { type: Schema.Types.ObjectId, ref: "Program", required: true },
-    offeringId: { type: Schema.Types.ObjectId, ref: "Offering", required: true },
+    programId: { type: String, required: true },
+    offeringId: { type: String, required: true },
     enrollmentDate: { type: Date, required: true },
-
 
     paymentMethod: {
       type: String,

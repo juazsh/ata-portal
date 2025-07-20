@@ -7,8 +7,8 @@ import { Program, Module } from "../models/program";
 import { ProgramProgress, ModuleProgress } from "../models/student-progress";
 import { sendMail } from "../services/email";
 import { getPortalAccountEmailTemplate } from "../utils/portal-account-email-templates";
-import { updateSessionCapacity } from "./class-sessions";
-import { ClassSession } from '../models/class-session';
+// import { updateSessionCapacity } from "./class-sessions";
+// import { ClassSession } from '../models/class-session';
 import { addStripePaymentForUser } from "./payment";
 import { InMemoryStore } from "server/in-memory";
 

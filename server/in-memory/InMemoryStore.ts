@@ -1,4 +1,5 @@
-import type { IOffering, IProgram } from '../models/program';
+import type { IOffering } from '../models/offering';
+import type { IProgram } from '../models/program';
 
 export class InMemoryStore {
   private static instance: InMemoryStore;
@@ -15,37 +16,41 @@ export class InMemoryStore {
   }
 
   public loadOfferings(offerings: IOffering[]) {
-    offerings.forEach(o => this.offerings.set(String(o._id), o));
+    offerings.forEach(o => this.offerings.set(o.id, o));
   }
+
   public loadPrograms(programs: IProgram[]) {
-    programs.forEach(p => this.programs.set(String(p._id), p));
+    programs.forEach(p => this.programs.set(p.id, p));
   }
 
   public getOfferingById(id: string): IOffering | undefined {
     return this.offerings.get(id);
   }
+
   public getProgramById(id: string): IProgram | undefined {
-    console.log("id", id);
-    console.log("this.programs", this.programs);
     return this.programs.get(id);
   }
 
   public getAllOfferings(): IOffering[] {
     return Array.from(this.offerings.values());
   }
+
   public getAllPrograms(): IProgram[] {
     return Array.from(this.programs.values());
   }
 
   public updateOffering(offering: IOffering) {
-    this.offerings.set(String(offering._id), offering);
+    this.offerings.set(offering.id, offering);
   }
+
   public updateProgram(program: IProgram) {
-    this.programs.set(String(program._id), program);
+    this.programs.set(program.id, program);
   }
+
   public removeOffering(id: string) {
     this.offerings.delete(id);
   }
+
   public removeProgram(id: string) {
     this.programs.delete(id);
   }

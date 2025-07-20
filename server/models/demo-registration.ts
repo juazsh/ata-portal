@@ -1,6 +1,8 @@
 import mongoose, { Schema, Document } from "mongoose";
+import { v4 as uuidv4 } from 'uuid';
 
 export interface IDemoRegistration extends Document {
+  id: string;
   parentFirstName: string;
   parentLastName: string;
   parentEmail: string;
@@ -22,6 +24,7 @@ export interface IDemoRegistration extends Document {
 
 const DemoRegistrationSchema = new Schema<IDemoRegistration>(
   {
+    id: { type: String, default: () => uuidv4(), required: true, unique: true },
     parentFirstName: { type: String, required: true },
     parentLastName: { type: String, required: true },
     parentEmail: { type: String, required: true },

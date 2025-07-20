@@ -23,7 +23,6 @@ interface EmailOptions {
 }
 
 export const sendMail = async ({ to, subject, html, attachments }: EmailOptions) => {
-  console.dir(process.env);
   const mailOptions = {
     from: process.env.EMAIL_ADDRESS,
     to,
